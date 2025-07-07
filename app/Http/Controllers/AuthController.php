@@ -12,7 +12,7 @@ class AuthController extends Controller
     {
         try {
             if (Auth::check()) {
-                return redirect()->route('admin'); // Arahkan ke dashboard jika sudah login
+                return redirect()->route('dashboard'); // Arahkan ke dashboard jika sudah login
             }
     
             // Jika belum login, tampilkan halaman login
@@ -55,5 +55,11 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         } 
+    }
+
+    public function logout()
+    {
+        Auth::logout();
+        return redirect()->route('login');
     }
 }

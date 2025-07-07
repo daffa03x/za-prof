@@ -13,9 +13,15 @@ class Payment extends Model
     protected $table = 'payments';
     protected $fillable = [
         'name',
+        'no_rek',
         'image',
         'status'
     ];
 
     public $timestamps = true;
+
+    public function transaksi()
+    {
+        return $this->HasOne(Transaksi::class, 'id_payment');
+    }
 }
