@@ -99,7 +99,7 @@
             <div class="container" data-aos="fade-up">
                 <div class="row gx-0">
 
-                    <div class="col-lg-6 d-flex flex-column justify-content-center" data-aos="fade-up" data-aos-delay="200">
+                    <div class="col-lg-5 d-flex flex-column justify-content-center" data-aos="fade-up" data-aos-delay="200">
                         <div class="content">
                             <h2>About Us</h2>
                             <p>
@@ -108,13 +108,12 @@
                                 pengembangan diri bagi pemuda-pemudi di seluruh Indonesia, berfokus pada pemberdayaan
                                 masyarakat melalui empat pilar utama: pendidikan, sosial, lingkungan, dan budaya.
                             </p>
-                            <div class="text-center text-lg-start">
-                            </div>
                         </div>
                     </div>
-
+                    <div class="col-lg-1">
+                    </div>
                     <div class="col-lg-6 d-flex align-items-center" data-aos="zoom-out" data-aos-delay="200">
-                        <img src="{{ asset('assets/img/za/about_us.jpg') }}" class="img-fluid" alt="About Us"
+                        <img src="{{ asset('assets/img/za/about_us.jpg') }}" class="img-fluid rounded" alt="About Us"
                             loading="lazy">
                     </div>
 
@@ -193,24 +192,21 @@
             <div class="container">
 
                 <div class="row gy-4">
-
                     @foreach ($event as $item)
                         <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
-                            <div class="service-item item-cyan position-relative">
-                                <img src="{{ asset($item->image) }}" alt="Social trip service image" height="200"
-                                    width="200" class="img-fluid mb-4" loading="lazy" />
-                                <h3>{{ $item->name }}</h3>
-                                <p>
-                                    {{ $item->deskripsi }}
-                                </p>
-                                <a href="{{ route('view_content', ['id' => $item->id]) }}" class="read-more stretched-link">
-                                    <span>Lihat</span>
-                                    <i class="bi bi-arrow-right"></i>
-                                </a>
-                            </div>
+                            <a href="{{ route('view_content', ['id' => $item->id]) }}">
+                                <div class="service-item item-indigo position-relative">
+                                    <img src="{{ asset($item->image) }}" alt="Social trip service image" height="200"
+                                        width="200" class="img-fluid mb-4 rounded" loading="lazy" />
+                                    <h3 class="text-start">{{ $item->name }}</h3>
+                                    <p class="text-start">{{ date('d F Y', strtotime($item->waktu_mulai)) }} Pukul
+                                        {{ date('H:i', strtotime($item->waktu_mulai)) }} -
+                                        {{ date('H:i', strtotime($item->waktu_berakhir)) }}</p>
+                                    <p class="text-start">@rupiah($item->harga)</p>
+                                </div>
+                            </a>
                         </div>
                     @endforeach
-
                 </div>
 
                 <!-- Section Title -->
@@ -342,7 +338,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-app">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/za/home_za.jpg') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/za/home_za.jpg') }}" class="img-fluid rounded"
                                     alt="Deskripsi Gambar" loading="lazy">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
@@ -355,7 +351,8 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-product">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/za/about_us.jpg') }}" class="img-fluid" alt="gallery">
+                                <img src="{{ asset('assets/img/za/about_us.jpg') }}" class="img-fluid rounded"
+                                    alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
                                     <a href="{{ asset('assets/img/za/about_us.jpg') }}" title=""
@@ -367,7 +364,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-branding">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/portfolio/portfolio_3.jpg') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/portfolio/portfolio_3.jpg') }}" class="img-fluid rounded"
                                     alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
@@ -380,7 +377,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-books">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/portfolio/portfolio_4.jpg') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/portfolio/portfolio_4.jpg') }}" class="img-fluid rounded"
                                     alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
@@ -393,8 +390,8 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-app">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/2016_0101_14534700.jpg') }}" class="img-fluid"
-                                    alt="gallery">
+                                <img src="{{ asset('assets/img/gallery/2016_0101_14534700.jpg') }}"
+                                    class="img-fluid rounded" alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
                                     <a href="{{ asset('assets/img/gallery/2016_0101_14534700.jpg') }}" title=""
@@ -406,8 +403,8 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-product">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/2016_0101_15564300.jpg') }}" class="img-fluid"
-                                    alt="gallery">
+                                <img src="{{ asset('assets/img/gallery/2016_0101_15564300.jpg') }}"
+                                    class="img-fluid rounded" alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
                                     <a href="{{ asset('assets/img/gallery/2016_0101_15564300.jpg') }}" title=""
@@ -419,7 +416,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-branding">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/IMG_4768.JPG') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/gallery/IMG_4768.JPG') }}" class="img-fluid rounded"
                                     alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
@@ -432,7 +429,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-books">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/IMG_4791.JPG') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/gallery/IMG_4791.JPG') }}" class="img-fluid rounded"
                                     alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
@@ -445,7 +442,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-app">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/IMG_7921.JPG') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/gallery/IMG_7921.JPG') }}" class="img-fluid rounded"
                                     alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
@@ -458,8 +455,8 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-product">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/IMG-20241019-WA0029.jpg') }}" class="img-fluid"
-                                    alt="gallery">
+                                <img src="{{ asset('assets/img/gallery/IMG-20241019-WA0029.jpg') }}"
+                                    class="img-fluid rounded" alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
                                     <a href="{{ asset('assets/img/gallery/IMG-20241019-WA0029.jpg') }}" title=""
@@ -471,7 +468,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-branding">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/DSC01086.jpg') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/gallery/DSC01086.jpg') }}" class="img-fluid rounded"
                                     alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>
@@ -484,7 +481,7 @@
 
                         <div class="col-lg-4 col-md-6 portfolio-item isotope-item filter-books">
                             <div class="portfolio-content h-100">
-                                <img src="{{ asset('assets/img/gallery/DSC01087.jpg') }}" class="img-fluid"
+                                <img src="{{ asset('assets/img/gallery/DSC01087.jpg') }}" class="img-fluid rounded"
                                     alt="gallery">
                                 <div class="portfolio-info">
                                     <h4>Gallery</h4>

@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\Event;
 use App\Exports\EventExport;
+use File;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\DB;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use Illuminate\Http\Request;
@@ -46,21 +46,16 @@ class EventController extends Controller
         try {
             $data = $request->validated();
 
-            // Cek apakah ada file logo yang diupload
-            if ($request->hasFile('image')) {
-                
-                $year = date('Y');  
-                $month = date('m'); 
-
-                // Tentukan path folder berdasarkan tahun dan bulan
-                $folderPath = 'images/' . $year . '/' . $month;
-
-                // Simpan file ke folder berdasarkan tahun dan bulan
-                $imagePath = $request->file('image')->store($folderPath, 'public');
-                
-                // Simpan path gambar ke dalam data array untuk disimpan ke database
-                $data['image'] = $imagePath;
-
+            if($request->hasFile('image')) {
+                $image = $request->file('image');
+                // Nama image
+                $nama_photo = date('Y-m-d_His').$image->getClientOriginalName();
+                // Simpan ke direktori
+                $image->move('image/event/'.date('Y-m').'/', $nama_photo);
+                // Nama Image File
+                $data['image'] = 'image/event/'.date('Y-m') .'/'. $nama_photo;    
+            }else{
+                $data['image'] = null;
             }
 
             // Status default
@@ -106,20 +101,17 @@ class EventController extends Controller
             // Validasi data request
             $data = $request->validated();
 
-            // Cek apakah ada file logo yang diupload
-            if ($request->hasFile('image')) {
-                
-                $year = date('Y');  
-                $month = date('m'); 
-
-                // Tentukan path folder berdasarkan tahun dan bulan
-                $folderPath = 'images/' . $year . '/' . $month;
-
-                // Simpan file ke folder berdasarkan tahun dan bulan
-                $imagePath = $request->file('image')->store($folderPath, 'public');
-                
-                // Simpan path gambar ke dalam data array untuk disimpan ke database
-                $data['image'] = $imagePath;
+            if($request->hasFile('image')) {
+                File::delete($event->image);
+                $image = $request->file('image');
+                // Nama image
+                $nama_photo = date('Y-m-d_His').$image->getClientOriginalName();
+                // Simpan ke direktori
+                $image->move('image/event/'.date('Y-m').'/', $nama_photo);
+                // Nama Image File
+                $data['image'] = 'image/event/'.date('Y-m') .'/'. $nama_photo;    
+            }else{
+                $data['image'] = $event->image;
             }
 
             // Update data event yang ada

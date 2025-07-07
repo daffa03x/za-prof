@@ -28,4 +28,9 @@ class Event extends Model
     ];
 
     public $timestamps = true;
+
+    public function transaksi()
+    {
+        return $this->HasOne(Transaksi::class, 'id_event');
+    }
 }

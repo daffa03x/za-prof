@@ -1238,20 +1238,20 @@ section,
 }
 
 .services .service-item.item-indigo {
-  border-bottom: 3px solid #6610f2;
+  border-bottom: 3px solid #895f9c;
 }
 
 .services .service-item.item-indigo .icon {
-  color: #6610f2;
+  color: #895f9c;
   background: rgba(102, 16, 242, 0.1);
 }
 
 .services .service-item.item-indigo .read-more {
-  color: #6610f2;
+  color: #895f9c;
 }
 
 .services .service-item.item-indigo:hover {
-  background: #6610f2;
+  background: #895f9c;
 }
 
 .services .service-item.item-pink {

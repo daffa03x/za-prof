@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
-use Illuminate\Support\Facades\DB;
 use App\Http\Requests\StorePaymentRequest;
 use App\Http\Requests\UpdatePaymentRequest;
 use Illuminate\Http\Request;
+use File;
 
 class PaymentController extends Controller
 {
@@ -42,21 +42,16 @@ class PaymentController extends Controller
         try {
             $data = $request->validated();
 
-            // Cek apakah ada file logo yang diupload
-            if ($request->hasFile('image')) {
-                
-                $year = date('Y');  
-                $month = date('m'); 
-
-                // Tentukan path folder berdasarkan tahun dan bulan
-                $folderPath = 'payment/images/' . $year . '/' . $month;
-
-                // Simpan file ke folder berdasarkan tahun dan bulan
-                $imagePath = $request->file('image')->store($folderPath, 'public');
-                
-                // Simpan path gambar ke dalam data array untuk disimpan ke database
-                $data['image'] = $imagePath;
-
+            if($request->hasFile('image')) {
+                $image = $request->file('image');
+                // Nama image
+                $nama_photo = date('Y-m-d_His').$image->getClientOriginalName();
+                // Simpan ke direktori
+                $image->move('image/payment/'.date('Y-m').'/', $nama_photo);
+                // Nama Image File
+                $data['image'] = 'image/payment/'.date('Y-m') .'/'. $nama_photo;    
+            }else{
+                $data['image'] = null;
             }
 
             // Status default
@@ -99,20 +94,17 @@ class PaymentController extends Controller
             // Validasi data request
             $data = $request->validated();
 
-            // Cek apakah ada file logo yang diupload
-            if ($request->hasFile('image')) {
-                
-                $year = date('Y');  
-                $month = date('m'); 
-
-                // Tentukan path folder berdasarkan tahun dan bulan
-                $folderPath = 'images/' . $year . '/' . $month;
-
-                // Simpan file ke folder berdasarkan tahun dan bulan
-                $imagePath = $request->file('image')->store($folderPath, 'public');
-                
-                // Simpan path gambar ke dalam data array untuk disimpan ke database
-                $data['image'] = $imagePath;
+            if($request->hasFile('image')) {
+                File::delete($payment->image);
+                $image = $request->file('image');
+                // Nama image
+                $nama_photo = date('Y-m-d_His').$image->getClientOriginalName();
+                // Simpan ke direktori
+                $image->move('image/payment/'.date('Y-m').'/', $nama_photo);
+                // Nama Image File
+                $data['image'] = 'image/payment/'.date('Y-m') .'/'. $nama_photo;    
+            }else{
+                $data['image'] = $payment->image;
             }
 
             // Update data payment yang ada
