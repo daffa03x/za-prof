@@ -23,7 +23,8 @@ class StorePaymentRequest extends FormRequest
     {
         return [
             'name' => 'required|max:100',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048|dimensions:min_width=100,min_height=100',
+            'no_rek' => 'required|max:100',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ];
     }
 }

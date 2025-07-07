@@ -6,7 +6,6 @@ use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
-use App\Http\Requests\StoreTransaksiPortalRequest;
 use Illuminate\Support\Facades\DB;
 
 class PortalController extends Controller
@@ -14,11 +13,9 @@ class PortalController extends Controller
     public function event_search(Request $request)
     {
         $search = $request->search;
-
         // Mulai query
         $query = Event::whereNull('deleted_at')
                         ->orderBy('created_at', 'desc');
-
         // Jika ada pencarian, terapkan filter
         if ($search) {
             $query->where(function($q) use ($search) {
@@ -26,7 +23,6 @@ class PortalController extends Controller
                 ->orWhere('mitra', 'like', '%' . $search . '%');
             });
         }
-
         // Ambil data dengan paginasi
         $event = $query->paginate(12);
 
@@ -55,20 +51,33 @@ class PortalController extends Controller
         return view('portal.checkout', compact('data', 'payment'));
     }
 
-    public function invoice(StoreTransaksiPortalRequest $request, $id) 
+    public function transaksiPost(Request $request, $id)
     {
+        // ... sebelum try ...
+        DB::beginTransaction();
         try {
-            $event = Event::find($id);
-            
+            $affectedRows = Event::where('id', $id)
+                                ->where('jumlah_tiket', '>=', $request->jumlah_tiket)
+                                ->decrement('jumlah_tiket', $request->jumlah_tiket);
+
+            if ($affectedRows === 0) {
+                // Ini berarti tiket tidak cukup atau event tidak ditemukan
+                throw new \Exception("Tiket tidak mencukupi atau event tidak valid.");
+            }
+
+            $event = Event::find($id); // Ambil data event yang sudah terupdate
+            if (!$event) { // Tambahkan pengecekan jika event tidak ditemukan setelah decrement
+                throw new \Exception("Event tidak ditemukan setelah decrement.");
+            }
+
             // Buat nomor invoice
-            $transaksi = Transaksi::orderBy('ID', 'desc')->first();
-            $invoice = date('Ymd') . $id + 1;
+            $invoice = date('YmdHis') . uniqid();
 
             $query = [
                 'id_event' => $id,
                 'invoice' => $invoice,
-                'jumlah_tiket' => $request->price / $event->harga,
-                'total_pembayaran' => $request->price,
+                'jumlah_tiket' => $request->jumlah_tiket,
+                'total_pembayaran' => $request->price, // HATI-HATI DENGAN INI (lihat poin 2)
                 'name' => $request->name,
                 'telepon' => $request->telepon,
                 'email' => $request->email,
@@ -80,10 +89,20 @@ class PortalController extends Controller
                 'id_payment' => $request->payment,
             ];
 
-            Transaksi::create($query);
+            $transaksi = Transaksi::create($query);
+            DB::commit();
+            return redirect("/invoice/$transaksi->id")->with('success', 'Success');
 
-            $data = Transaksi::with('event')->where('invoice', $invoice)->first();
+        } catch (\Exception $e) {
+            DB::rollback();
+            return dd($e->getMessage());
+        }
+    }
 
+    public function invoice($id) 
+    {
+        try {
+            $data = Transaksi::with('event','payment')->find($id);
             return view('portal.invoice', compact('data'));
         } catch (\Exception $e) {
             return redirect()->route('portal.checkout', ['id' => $id])->with('error', 'Failed');
@@ -92,11 +111,10 @@ class PortalController extends Controller
 
     public function program(Request $request)
     {
-            $event = Event::whereNull('deleted_at')
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(12);
-            
-            return view('portal.program', compact('event'));
+        $event = Event::whereNull('deleted_at')
+                ->orderBy('created_at', 'desc')
+                ->paginate(12);
+        
+        return view('portal.program', compact('event'));
     }
-    
 }

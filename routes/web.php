@@ -25,49 +25,57 @@ use App\Http\Controllers\PortalController;
 Route::get('/', [PortalController::class, 'index'])->name('index');
 Route::get('/view_content/{id}', [PortalController::class, 'view_content'])->name('view_content');
 Route::get('/checkout/{id}', [PortalController::class, 'checkout'])->name('checkout');
-Route::post('/invoice/{id}', [PortalController::class, 'invoice'])->name('invoice');
+Route::get('/invoice/{id}', [PortalController::class, 'invoice'])->name('invoice');
+Route::post('/transaksi/post/{id}', [PortalController::class, 'transaksiPost'])->name('transaksi.post');
 Route::get('/program', [PortalController::class, 'program'])->name('program');
 Route::get('/portal/search', [PortalController::class, 'event_search'])->name('portal.search');
 
 
 // Auth
 Route::get('/login', [AuthController::class, 'login'])->name('login');
-Route::get('/register', [AuthController::class, 'register'])->name('register');
-Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+// Route::get('/register', [AuthController::class, 'register'])->name('register');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::post('/auth', [AuthController::class, 'auth'])->name('auth');
 
-// Admin
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/tiket', function() {
+    return view('component.ticket.index');
+});
 
-// Search
-Route::get('/campaign/search', [CampaignController::class, 'search'])->name('campaign.search');
-Route::get('/event/search', [EventController::class, 'search'])->name('event.search');
-Route::get('/transaksi/search', [TransaksiController::class, 'search'])->name('transaksi.search');
-Route::get('/payment/search', [PaymentController::class, 'search'])->name('payment.search');
-Route::get('/pixel/search', [PixelController::class, 'search'])->name('pixel.search');
 
-// Filter
-Route::get('/campaign/filter', [CampaignController::class, 'filter'])->name('campaign.filter');
-Route::get('/event/filter', [EventController::class, 'filter'])->name('event.filter');
-Route::get('/transaksi/filter', [TransaksiController::class, 'filter'])->name('transaksi.filter');
+Route::middleware('auth')->group(function () {
+    // Admin
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-// Export
-Route::post('/campaign/export', [CampaignController::class, 'export'])->name('campaign.export');
-Route::post('/event/export', [EventController::class, 'export'])->name('event.export');
-Route::post('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
-Route::post('/transaksi/update', [TransaksiController::class, 'update_status'])->name('transaksi.update');
+    // Search
+    Route::get('/campaign/search', [CampaignController::class, 'search'])->name('campaign.search');
+    Route::get('/event/search', [EventController::class, 'search'])->name('event.search');
+    Route::get('/transaksi/search', [TransaksiController::class, 'search'])->name('transaksi.search');
+    Route::get('/payment/search', [PaymentController::class, 'search'])->name('payment.search');
+    Route::get('/pixel/search', [PixelController::class, 'search'])->name('pixel.search');
 
-// Campaign
-Route::resource('/campaign', CampaignController::class);
+    // Filter
+    Route::get('/campaign/filter', [CampaignController::class, 'filter'])->name('campaign.filter');
+    Route::get('/event/filter', [EventController::class, 'filter'])->name('event.filter');
+    Route::get('/transaksi/filter', [TransaksiController::class, 'filter'])->name('transaksi.filter');
 
-// Event
-Route::resource('/event', EventController::class);
+    // Export
+    Route::post('/campaign/export', [CampaignController::class, 'export'])->name('campaign.export');
+    Route::post('/event/export', [EventController::class, 'export'])->name('event.export');
+    Route::post('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
+    Route::post('/transaksi/update', [TransaksiController::class, 'update_status'])->name('transaksi.update');
 
-// Transaksi
-Route::resource('/transaksi', TransaksiController::class);
+    // Campaign
+    Route::resource('/campaign', CampaignController::class);
 
-// Payment
-Route::resource('/payment', PaymentController::class);
+    // Event
+    Route::resource('/event', EventController::class);
 
-// Pixel
-Route::resource('/pixel', PixelController::class);
+    // Transaksi
+    Route::resource('/transaksi', TransaksiController::class);
+
+    // Payment
+    Route::resource('/payment', PaymentController::class);
+
+    // Pixel
+    Route::resource('/pixel', PixelController::class);
+});
