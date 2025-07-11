@@ -7,10 +7,13 @@ use App\Models\Transaksi;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Exports\ExportTransaksi;
+use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Http\Requests\StoreTransaksiRequest;
 use App\Http\Requests\UpdateTransaksiRequest;
 use Illuminate\Http\Request;
+use App\Mail\SendTicket;
+
 
 class TransaksiController extends Controller
 {
@@ -66,8 +69,6 @@ class TransaksiController extends Controller
                 'name' => $query['name'],
                 'email' => $query['email'],
                 'telepon' => $query['telepon'],
-                'jenis_kelamin' => $query['jenis_kelamin'],
-                'tanggal_lahir' => $query['tanggal_lahir'],
                 'status_pembayaran' => 'Pending',
                 'tanggal_register' => now(),
                 'tanggal_pembayaran' => null,
@@ -124,8 +125,6 @@ class TransaksiController extends Controller
                 'name' => $query['name'],
                 'email' => $query['email'],
                 'telepon' => $query['telepon'],
-                'jenis_kelamin' => $query['jenis_kelamin'],
-                'tanggal_lahir' => $query['tanggal_lahir'],
                 'status_pembayaran' => 'Pending', // Jika status tetap Pending
                 'tanggal_register' => now(),
                 'tanggal_pembayaran' => null,
@@ -147,10 +146,23 @@ class TransaksiController extends Controller
     public function destroy(Transaksi $transaksi)
     {
         try {
-            $transaksi->delete(); //soft delete
-            return redirect()->route('transaksi.index')->with('success', 'success');
+            // Sebelum menghapus (soft delete) transaksi, kembalikan jumlah_tiket
+            // Pastikan relasi 'event' sudah didefinisikan di model Transaksi
+            // dan kolom 'jumlah_tiket' ada di tabel 'events'.
+            if ($transaksi->event) { // Memastikan ada event terkait
+                $event = $transaksi->event; // Mendapatkan objek event yang terkait
+                $event->jumlah_tiket += $transaksi->jumlah_tiket; // Tambahkan jumlah tiket kembali ke jumlah_tiket
+                $event->save(); // Simpan perubahan jumlah_tiket event
+            }
+
+            $transaksi->delete(); // Lakukan soft delete pada transaksi
+
+            return redirect()->route('transaksi.index')->with('success', 'Transaksi berhasil dihapus dan jumlah_tiket dikembalikan.');
         } catch (\Exception $e) {
-            return redirect()->route('transaksi.index')->with('error', 'failed');
+            // Log error untuk debugging
+            \Log::error("Error saat menghapus transaksi ID {$transaksi->id} dan mengembalikan jumlah_tiket: " . $e->getMessage());
+
+            return redirect()->route('transaksi.index')->with('error', 'Gagal menghapus transaksi atau mengembalikan jumlah_tiket.');
         }
     }
 
@@ -171,8 +183,6 @@ class TransaksiController extends Controller
                             'transaksis.name',
                             'transaksis.email',
                             'transaksis.telepon',
-                            'transaksis.jenis_kelamin',
-                            'transaksis.tanggal_lahir',
                             'transaksis.status_pembayaran',
                             'transaksis.tanggal_register',
                             'transaksis.tanggal_pembayaran',
@@ -211,8 +221,6 @@ class TransaksiController extends Controller
                     'name' => $data->name,
                     'email' => $data->email,
                     'telepon' => $data->telepon,
-                    'jenis_kelamin' =>$data->jenis_kelamin,
-                    'tanggal_lahir' =>Carbon::parse($data->tanggal_lahir)->format('d-m-y'),
                     'status_pembayaran' =>$data->status_pembayaran,
                     'tanggal_register' =>Carbon::parse($data->tanggal_register)->format('d-m-y h:i A'),
                     'tanggal_pembayaran' =>Carbon::parse($data->tanggal_pembayaran)->format('d-m-y h:i A'),
@@ -296,6 +304,8 @@ class TransaksiController extends Controller
 
         $transaksi = Transaksi::find($id);
 
+        Mail::to($transaksi->email)->send(new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/$transaksi->invoice"));
+   
         if ($transaksi) {
             $data = [
                 'status_pembayaran' => 'Success',

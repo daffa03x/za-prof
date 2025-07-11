@@ -18,13 +18,20 @@ class Transaksi extends Model
         'name',
         'email',
         'telepon',
-        'jenis_kelamin',
-        'tanggal_lahir',
         'status_pembayaran',
         'tanggal_register',
         'tanggal_pembayaran',
         'id_payment'
     ];
+
+    protected $casts = [
+        'tanggal_register' => 'datetime',
+    ];
+
+    public function getRouteKeyName()
+    {
+        return 'invoice'; // Laravel akan mencari Transaksi berdasarkan kolom 'invoice'
+    }
 
     public function event()
     {

@@ -415,11 +415,11 @@
 
         <section class="event-info">
             <div class="event-title">
-                <h1>Social Trip - Bersihkan Jejak, Jaga Bumi Edisi Tahura Bandung</h1>
+                <h1>{{ $transaksi->event->name }}</h1>
             </div>
             <div class="event-details">
                 <div class="event-image">
-                    <img src="{{ asset('image/event/2025-06/2025-06-23_0210191.png') }}" alt="Social Trip">
+                    <img src="{{ asset($transaksi->event->image) }}" alt="Social Trip">
                 </div>
                 <div class="details-content">
                     <div class="detail-item">
@@ -436,7 +436,10 @@
                             <path
                                 d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5m9.954 3H2.545c-.3 0-.545.224-.545.5v1c0 .276.244.5.545.5h10.91c.3 0 .545-.224.545-.5v-1c0-.276-.244-.5-.546-.5M8.5 7a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM3 10.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5m3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z" />
                         </svg>
-                        <span style="margin-left: 5px">30 Nov 2024 07:00 - 13:00</span>
+                        <span style="margin-left: 5px">{{ date('d F Y', strtotime($transaksi->event->waktu_mulai)) }}
+                            Pukul
+                            {{ date('H:i', strtotime($transaksi->event->waktu_mulai)) }} -
+                            {{ date('H:i', strtotime($transaksi->event->waktu_berakhir)) }}</span>
                     </div>
                     <div class="detail-item">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -444,7 +447,7 @@
                             <path
                                 d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6" />
                         </svg>
-                        <span style="margin-left: 5px">Taman Hutan Raya Ir. Juanda Bandung,</span>
+                        <span style="margin-left: 5px">{{ $transaksi->event->nama_tempat }}</span>
                     </div>
                 </div>
             </div>
@@ -457,15 +460,15 @@
             <div class="order-details-grid">
                 <div class="order-item">
                     <span class="label">Nama / Name</span>
-                    <span class="value">Febri Ayunikasari</span>
+                    <span class="value">{{ $transaksi->name }}</span>
                 </div>
                 <div class="order-item">
                     <span class="label">Kode Tagihan / Invoice Code</span>
-                    <span class="value invoice-code">2025070403373468674c7e1bf77</span>
+                    <span class="value invoice-code">{{ $transaksi->invoice }}</span>
                 </div>
                 <div class="order-item">
                     <span class="label">Tanggal Pembelian / Order Date</span>
-                    <span class="value">22 Nov 2024 12:58</span>
+                    <span class="value">{{ $transaksi->created_at }}</span>
                 </div>
                 <div class="order-item">
                     <span class="label">Referensi / Reference</span>

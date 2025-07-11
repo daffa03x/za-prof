@@ -112,11 +112,11 @@
                                     </td>
                                     <td>{{ $item->name_payment }}</td>
                                     <td>
-                                        <a href="{{ route('transaksi.show', $item->id) }}"
-                                            class="btn btn-sm btn-info m-1">Lihat</a>
-                                        <a href="{{ route('transaksi.edit', $item->id) }}"
-                                            class="btn btn-sm btn-warning m-1">Edit</a>
-                                        <form action="{{ route('transaksi.destroy', $item->id) }}" method="POST"
+                                        <a href="{{ route('transaksi.show', $item->invoice) }}"
+                                            class="btn btn-sm btn-info m-1 text-white">Lihat</a>
+                                        {{-- <a href="{{ route('transaksi.edit', $item->invoice) }}"
+                                            class="btn btn-sm btn-warning m-1">Edit</a> --}}
+                                        <form action="{{ route('transaksi.destroy', $item->invoice) }}" method="POST"
                                             style="display:inline;" onsubmit="return confirmDelete();">
                                             @csrf
                                             @method('DELETE')
@@ -138,6 +138,12 @@
 
     <script>
         async function updateStatus(id) {
+            const confirmation = confirm("Apakah Anda yakin ingin memperbarui status transaksi ini?");
+            if (!confirmation) {
+                console.log("Pembaruan status dibatalkan oleh pengguna.");
+                return;
+            }
+
             try {
                 // Kirim permintaan untuk memperbarui status transaksi
                 const response = await fetch('/transaksi/update', {

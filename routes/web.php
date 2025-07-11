@@ -29,6 +29,7 @@ Route::get('/invoice/{id}', [PortalController::class, 'invoice'])->name('invoice
 Route::post('/transaksi/post/{id}', [PortalController::class, 'transaksiPost'])->name('transaksi.post');
 Route::get('/program', [PortalController::class, 'program'])->name('program');
 Route::get('/portal/search', [PortalController::class, 'event_search'])->name('portal.search');
+Route::get('/tiket/{invoice}', [PortalController::class, 'tiket'])->name('portal.tiket');
 
 
 // Auth
@@ -37,9 +38,14 @@ Route::get('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::post('/auth', [AuthController::class, 'auth'])->name('auth');
 
-Route::get('/tiket', function() {
-    return view('component.ticket.index');
-});
+// Route::get('/send-email',function(){
+//     $transactionId = 'TXN-123456789'; // Ganti dengan ID transaksi aktual dari database/response pembayaran
+//     $ticketUrl = 'https://your-app.com/tickets/view/abc123def'; // Ganti dengan URL tiket aktual Anda
+
+//     Mail::to('dafaputra876@gmail.com')->send(new SendTicket($transactionId, $ticketUrl));
+   
+//     dd("Berikut no invoice $transactionId dan Link tiket $ticketUrl");
+// });
 
 
 Route::middleware('auth')->group(function () {
@@ -63,6 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/event/export', [EventController::class, 'export'])->name('event.export');
     Route::post('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
     Route::post('/transaksi/update', [TransaksiController::class, 'update_status'])->name('transaksi.update');
+    Route::put('/event/update-status/{id}', [EventController::class, 'update_status'])->name('event.update.status');
 
     // Campaign
     Route::resource('/campaign', CampaignController::class);

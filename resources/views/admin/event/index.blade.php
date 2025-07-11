@@ -83,11 +83,15 @@
                                     <td>@rupiah($item->harga)</td>
                                     </td>
                                     <td>
-                                        @if ($item->status == 0)
-                                            <a href="{{ $item->status }}" class="btn btn-sm badge bg-success m-1">Y</a>
-                                        @else
-                                            <a href="{{ $item->status }}" class="btn btn-sm badge bg-danger m-1">N</a>
-                                        @endif
+                                        <form action="{{ route('event.update.status', $item->id) }}" method="POST">
+                                            @csrf
+                                            @method('PUT')
+                                            @if ($item->status == 1)
+                                                <button type="submit" class="btn btn-sm badge bg-success m-1">Y</button>
+                                            @else
+                                                <button type="submit" class="btn btn-sm badge bg-danger m-1">N</button>
+                                            @endif
+                                        </form>
                                     </td>
                                     <td>{{ $item->waktu_mulai }}</td>
                                     <td>{{ $item->waktu_berakhir }}</td>

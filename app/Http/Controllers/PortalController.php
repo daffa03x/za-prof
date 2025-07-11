@@ -81,8 +81,6 @@ class PortalController extends Controller
                 'name' => $request->name,
                 'telepon' => $request->telepon,
                 'email' => $request->email,
-                'tanggal_lahir' => $request->tanggal_lahir,
-                'jenis_kelamin' => $request->jenis_kelamin,
                 'status_pembayaran' => 'Pending',
                 'tanggal_register' => now(),
                 'tanggal_pembayaran' => null,
@@ -103,7 +101,11 @@ class PortalController extends Controller
     {
         try {
             $data = Transaksi::with('event','payment')->find($id);
-            return view('portal.invoice', compact('data'));
+            if($data == null){
+                return redirect('/program');
+            }else{
+                return view('portal.invoice', compact('data'));
+            }
         } catch (\Exception $e) {
             return redirect()->route('portal.checkout', ['id' => $id])->with('error', 'Failed');
         }
@@ -116,5 +118,19 @@ class PortalController extends Controller
                 ->paginate(12);
         
         return view('portal.program', compact('event'));
+    }
+
+    public function tiket($invoice)
+    {
+        try {
+            $transaksi = Transaksi::with("event")->where('invoice',$invoice)->where('status_pembayaran',"Success")->first();
+            if($transaksi){
+                return view('portal.tiket', compact('transaksi'));
+            }else{
+                return view('portal.error-tiket');
+            }
+        } catch (\Exception $e) {
+            return redirect('/')->with('error', 'Failed');
+        }
     }
 }

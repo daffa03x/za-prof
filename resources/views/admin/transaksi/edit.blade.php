@@ -100,7 +100,7 @@
                                         </span>
                                     @enderror
                                 </div>
-                                <div class="form-group col-md-4">
+                                {{-- <div class="form-group col-md-4">
                                     <label for="jenis_kelamin">Jenis Kelamin</label>
                                     <select id="jenis_kelamin" name="jenis_kelamin"
                                         class="form-control @error('jenis_kelamin') is-invalid @enderror">
@@ -119,8 +119,8 @@
                                             <strong>{{ $message }}</strong>
                                         </span>
                                     @enderror
-                                </div>
-                                <div class="form-group col-md-4">
+                                </div> --}}
+                                {{-- <div class="form-group col-md-4">
                                     <label for="tanggal_lahir">Tanggal Lahir</label>
                                     <input type="date" class="form-control @error('tanggal_lahir') is-invalid @enderror"
                                         value="{{ old('tanggal_lahir', $data->tanggal_lahir) }}" name="tanggal_lahir">
@@ -129,7 +129,7 @@
                                             <strong>{{ $message }}</strong>
                                         </span>
                                     @enderror
-                                </div>
+                                </div> --}}
                             </div>
                             <div class="form-row">
                                 <div class="form-group col-md-4">
