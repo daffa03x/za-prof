@@ -111,7 +111,7 @@
                     @foreach ($event as $item)
                         <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
                             <a href="{{ route('view_content', ['id' => $item->id]) }}">
-                                <div class="service-item item-cyan position-relative">
+                                <div class="service-item item-indigo position-relative">
                                     <img src="{{ asset($item->image) }}" alt="Social trip service image" height="200"
                                         width="200" class="img-fluid mb-4 rounded" loading="lazy" />
                                     <h3 class="text-start">{{ $item->name }}</h3>
