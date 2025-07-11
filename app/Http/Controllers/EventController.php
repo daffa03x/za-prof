@@ -249,4 +249,24 @@ class EventController extends Controller
 
         return view('admin.event.index', compact('title', 'data'));
     }
+
+    public function update_status($id)
+    {
+        try{
+            $data = Event::find($id);
+            if($data->status == 1){
+                $data->update([
+                    'status' => 0
+                ]);
+                return redirect('/event')->with('success','success');
+            }else{
+                $data->update([
+                    'status' => 1
+                ]);  
+                return redirect('/event')->with('success','success');
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('event.index')->with('error', 'failed');
+        }
+    }
 }
