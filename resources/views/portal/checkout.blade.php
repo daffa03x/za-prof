@@ -175,12 +175,12 @@
                                             </div>
                                         </div>
 
-                                        <div class="form-group py-2">
+                                        <div class="form-group py-2 mb-2">
                                             <label for="email">Email</label>
                                             <input type="text" class="form-control" id="email" name="email"
                                                 placeholder="E-tiket akan dikirim ke email kamu.">
                                         </div>
-                                        <div class="row py-2 mb-2">
+                                        {{-- <div class="row py-2 mb-2">
                                             <div class="form-group col-lg-8">
                                                 <label for="inputState">Tanggal lahir</label>
                                                 <input type="date" class="form-control" name="tanggal_lahir"
@@ -193,7 +193,7 @@
                                                     <option value="P">Perempuan</option>
                                                 </select>
                                             </div>
-                                        </div>
+                                        </div> --}}
                                         <div class="card-price py-2">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 @php

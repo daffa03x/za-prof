@@ -186,7 +186,7 @@
                                 <p class="mb-0">Harga Mulai</p>
                                 <h5 class="mb-0">@rupiah($data->harga)</h5>
                             </div>
-                            @if ($data->jumlah_tiket > 0)
+                            @if ($data->jumlah_tiket > 0 && $data->status == 1)
                                 <a href="{{ route('checkout', ['id' => $data->id]) }}" class="btn btn-block text-white"
                                     style="background-color:#5a2d67">Beli Tiket</a>
                             @else

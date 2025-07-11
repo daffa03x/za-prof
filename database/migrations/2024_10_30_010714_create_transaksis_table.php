@@ -21,8 +21,6 @@ return new class extends Migration
             $table->string('name');
             $table->string('email');
             $table->string('telepon');
-            $table->enum('jenis_kelamin', ['L', 'P']);
-            $table->date('tanggal_lahir');
             $table->enum('status_pembayaran', ['Success', 'Failed', 'Pending']);
             $table->dateTime('tanggal_register');
             $table->dateTime('tanggal_pembayaran')->nullable();

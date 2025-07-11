@@ -57,7 +57,7 @@
                                 </div>
                             </div>
                         </div>
-
+                        {{-- 
                         <div class="d-flex flex-row bd-highlight mb-3">
                             @if ($data->jenis_kelamin === 'P')
                                 <div class="p-2 bd-highlight"><strong>Jenis Kelamin:</strong> Laki - Laki,</div>
@@ -65,7 +65,7 @@
                                 <div class="p-2 bd-highlight"><strong>Jenis Kelamin:</strong> Perempuan,</div>
                             @endif
                             <div class="p-2 bd-highlight"><strong>Tanggal Lahir:</strong> {{ $data->tanggal_lahir }}</div>
-                        </div>
+                        </div> --}}
 
                         <p><strong class="h5 mt-4 pt-2">Detail pembayaran.</strong></p>
                         <div class="border border-secondary rounded pt-1 mb-4">

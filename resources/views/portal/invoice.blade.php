@@ -135,13 +135,13 @@
                         <div class="text-center mb-4">
                             <div class="card-body bg-light p-3">
                                 <p class="fw-bold text-muted">Sisa Waktu Pembayaran</p>
-                                <h2 class="display-5 text-primary fw-bold">
-                                    00 : 43 : 48
+                                <h2 class="display-5 fw-bold" style="color: #5a2d67" id="countdown-timer">
+                                    00 : 00 : 00
                                 </h2>
                                 <small class="text-muted">jam &nbsp; menit &nbsp; detik</small>
                                 <p class="mt-3 text-muted">
                                     Selesaikan pembayaranmu sebelum <br>
-                                    <strong>Mon, 16 Dec 2024 10:01 AM</strong>
+                                    <strong id="payment-deadline-display">Mon, 16 Dec 2024 10:01 AM</strong>
                                 </p>
                             </div>
                         </div>
@@ -302,4 +302,66 @@
 
     </main>
     @include('component.layout.footer')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ambil tanggal register dari PHP, lalu tambahkan 24 jam (atau deadline yang sudah dihitung)
+            // Pastikan $data->tanggal_register adalah instance Carbon yang valid dan telah di-casts sebagai 'datetime' di model.
+            // Asumsi $data->tanggal_register sudah ada dan merupakan tanggal mulai pembayaran.
+            // Kita akan menambahkan 24 jam ke tanggal tersebut di JavaScript.
+            const registerDateString = @json($data->tanggal_register->toIso8601String());
+            console.log('registerDateString:', registerDateString); // Cek format ini
+            const registerDate = new Date(registerDateString);
+            console.log('registerDate (JS Object):', registerDate); // Cek apakah ini objek Date yang valid
+
+            const paymentDeadline = new Date(registerDate.getTime() + (24 * 60 * 60 * 1000));
+            console.log('paymentDeadline:', paymentDeadline); // Cek apakah deadline terhitung benar
+
+            // Update tampilan tanggal deadline
+            document.getElementById('payment-deadline-display').innerText = paymentDeadline.toLocaleString(
+                'id-ID', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+            const countdownElement = document.getElementById('countdown-timer');
+
+            function updateCountdown() {
+                const now = new Date().getTime();
+                const distance = paymentDeadline.getTime() - now;
+
+                // Hitung waktu yang tersisa
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                // Format angka menjadi dua digit (misal: 05 daripada 5)
+                const formattedHours = String(hours).padStart(2, '0');
+                const formattedMinutes = String(minutes).padStart(2, '0');
+                const formattedSeconds = String(seconds).padStart(2, '0');
+
+                // Tampilkan sisa waktu
+                countdownElement.innerHTML = `${formattedHours} : ${formattedMinutes} : ${formattedSeconds}`;
+
+                // Jika hitungan mundur selesai
+                if (distance < 0) {
+                    clearInterval(countdownInterval); // Hentikan timer
+                    countdownElement.innerHTML = "00 : 00 : 00";
+                    alert("Waktu pembayaran telah berakhir!");
+                    // Anda bisa menambahkan logika lain di sini, seperti menonaktifkan tombol pembayaran
+                    // atau mengubah status transaksi di backend via AJAX request.
+                }
+            }
+
+            // Panggil fungsi sekali segera untuk menghindari jeda awal
+            updateCountdown();
+
+            // Perbarui hitungan mundur setiap 1 detik
+            const countdownInterval = setInterval(updateCountdown, 1000);
+        });
+    </script>
 @endsection

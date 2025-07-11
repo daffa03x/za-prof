@@ -26,8 +26,6 @@ class StoreTransaksiPortalRequest extends FormRequest
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100',
             'telepon' => 'required|numeric',
-            'jenis_kelamin' => 'required|in:L,P',
-            'tanggal_lahir' => 'required|date',
             'payment' => 'required|string'
         ];
         

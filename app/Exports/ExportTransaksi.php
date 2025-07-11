@@ -32,8 +32,6 @@ class ExportTransaksi implements FromCollection, WithHeadings
             'Name',
             'Email',
             'Telepon',
-            'Jenis Kelamin',
-            'Tanggal Lahir',
             'Status Pembayaran',
             'Tanggal Register',
             'Tanggal Pembayaran',
