@@ -194,7 +194,7 @@
                                     style="background-color: #f2f2f2; padding: 15px; border-radius: 8px; text-align: center; margin-top: 20px;">
                                     <p style="font-size: 1.1rem; font-weight: bold; color: #dc3545; margin-bottom: 15px;">
                                         Tiket Habis</p>
-                                    <a href="{{ url('/program') }}"
+                                    <a href="{{ url('/event-sostrip') }}"
                                         style="background-color: #5a2d67; border-color: #5a2d67; color: white; font-weight: bold; padding: 10px 25px; border-radius: 5px; text-decoration: none; display: inline-block;">Lihat
                                         Event Lain</a>
                                 </div>

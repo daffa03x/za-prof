@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PortalController extends Controller
 {
@@ -31,7 +32,7 @@ class PortalController extends Controller
 
     public function index(Request $request)
     {
-        $event = Event::get();
+        $event = Event::orderByDesc('id')->get();
 
         return view('portal.index', compact('event'));
     }
@@ -102,9 +103,23 @@ class PortalController extends Controller
         try {
             $data = Transaksi::with('event','payment')->find($id);
             if($data == null){
-                return redirect('/program');
+                return redirect('/event-sostrip');
             }else{
-                return view('portal.invoice', compact('data'));
+                // Ambil tanggal pembuatan data
+                $tanggalDibuat = Carbon::parse($data->tanggal_register); // Pastikan ini mengakses kolom created_at yang benar
+
+                // Hitung tanggal 1 hari dari hari ini
+                $batasWaktu = Carbon::now()->subDays(1); // Ini akan menjadi "kemarin"
+
+                // Periksa apakah waktu pembuatan lebih dari 1 hari yang lalu (yaitu, sebelum kemarin)
+                if ($tanggalDibuat->lessThan($batasWaktu)) {
+                    // Jika sudah lebih dari 1 hari, arahkan ke view lain (misalnya halaman kadaluarsa)
+                    // return view('portal.invoice_kadaluarsa');
+                    return redirect('/event-sostrip');
+                } else {
+                    // Jika belum kadaluarsa, tampilkan view invoice biasa
+                    return view('portal.invoice', compact('data'));
+                }
             }
         } catch (\Exception $e) {
             return redirect()->route('portal.checkout', ['id' => $id])->with('error', 'Failed');
