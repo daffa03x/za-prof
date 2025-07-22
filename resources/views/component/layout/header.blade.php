@@ -11,9 +11,9 @@
             <ul>
                 <li><a href="#hero" class="active">Home<br></a></li>
                 <li><a href="#about">About</a></li>
-                <li><a href="#services">Event</a></li>
+                <li><a href="#services">Social Trip Events</a></li>
                 <li><a href="#portfolio">Portfolio</a></li>
-                <li><a href="#features">Social Trip</a></li>
+                <li><a href="#features">Zillenial Action Programs</a></li>
                 <li><a href="#gallery">Gallery</a></li>
             </ul>
             <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>

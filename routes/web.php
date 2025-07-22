@@ -27,7 +27,7 @@ Route::get('/view_content/{id}', [PortalController::class, 'view_content'])->nam
 Route::get('/checkout/{id}', [PortalController::class, 'checkout'])->name('checkout');
 Route::get('/invoice/{id}', [PortalController::class, 'invoice'])->name('invoice');
 Route::post('/transaksi/post/{id}', [PortalController::class, 'transaksiPost'])->name('transaksi.post');
-Route::get('/program', [PortalController::class, 'program'])->name('program');
+Route::get('/event-sostrip', [PortalController::class, 'program'])->name('event.sostrip');
 Route::get('/portal/search', [PortalController::class, 'event_search'])->name('portal.search');
 Route::get('/tiket/{invoice}', [PortalController::class, 'tiket'])->name('portal.tiket');
 

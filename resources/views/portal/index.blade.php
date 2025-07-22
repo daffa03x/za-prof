@@ -211,7 +211,7 @@
 
                 <!-- Section Title -->
                 <div class="container section-title " data-aos="fade-up">
-                    <br><a href="{{ route('program') }}" class="more-button">Selengkapnya</a>
+                    <br><a href="{{ url('/event-sostrip') }}" class="more-button">Selengkapnya</a>
                 </div>
                 <!-- End Section Title -->
 
@@ -285,7 +285,7 @@
 
             <!-- Section Title -->
             <div class="container section-title" data-aos="fade-up">
-                <p>Social Trip Programs<br></p>
+                <p>Zillenial Action Program<br></p>
             </div><!-- End Section Title -->
 
             <div class="container">
@@ -293,26 +293,34 @@
                 <div class="row gy-5">
 
                     <div class="col-xl-6" data-aos="zoom-out" data-aos-delay="100">
-                        <img src="{{ asset('assets/img/features.png') }}" class="img-fluid" alt="">
+                        <div class="content">
+                            <h3 class="text-center">Social Trip</h3>
+                            <p style="text-align: justify;">
+                                Social Trip adalah program yang melibatkan generasi muda untuk berkontribusi langsung
+                                melalui aksi nyata seperti kampanye sosial, inovasi, dan kegiatan komunitas. Fokusnya pada
+                                isu pendidikan, sosial, lingkungan, dan budaya, dengan tujuan menjadikan generasi muda
+                                sebagai agen perubahan yang berdampak positif bagi masyarakat dan lingkungan.
+                            </p>
+                            <div class="d-flex justify-content-center">
+                                <img src="{{ asset('assets/img/sostrip.png') }}" alt="" class="img-fluid mt-4">
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="col-xl-6 d-flex">
-                        <div class="row align-self-center gy-4">
-
-                            <div class="col-md-6" data-aos="fade-up" data-aos-delay="200">
-                                <div class="feature-box d-flex align-items-center">
-                                    <i class="bi bi-check"></i>
-                                    <h3>Mengajar Desa</h3>
-                                </div>
-                            </div><!-- End Feature Item -->
-
-                            <div class="col-md-6" data-aos="fade-up" data-aos-delay="300">
-                                <div class="feature-box d-flex align-items-center">
-                                    <i class="bi bi-check"></i>
-                                    <h3>Explore Desa</h3>
-                                </div>
-                            </div><!-- End Feature Item -->
-
+                    <div class="col-xl-6" data-aos="zoom-out" data-aos-delay="200">
+                        <div class="content">
+                            <h3 class="text-center">Zillenial Impact</h3>
+                            <p style="text-align: justify;">
+                                Zillenial Impact adalah sebuah program berdampak yang digerakkan oleh generasi muda, program
+                                tersebut bertujuan menciptakan dampak nyata dan berkelanjutan di berbagai sektor
+                                pembangunan. Gerakan ini memfokuskan diri pada pemberdayaan langsung kepada masyarakat
+                                melalui pendekatan kolaboratif, inovatif, dan partisipatif dalam mendukung pencapaian Tujuan
+                                Pembangunan Berkelanjutan (SDGs).
+                            </p>
+                            <div class="d-flex justify-content-center">
+                                <img src="{{ asset('assets/img/zillenial_impact.png') }}" alt=""
+                                    class="img-fluid">
+                            </div>
                         </div>
                     </div>
 
