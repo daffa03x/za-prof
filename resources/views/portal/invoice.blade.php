@@ -172,7 +172,8 @@
                                     <p>Scan kode QR di bawah</p>
                                     <img src="https://via.placeholder.com/200x200" alt="QR Code" class="img-fluid mb-3">
                                 @else
-                                    <p>Setelah pembayaran Anda berhasil kami verifikasi, tiket akan segera dikirimkan ke
+                                    <p>Verifikasi pembayaran dengan menghubungi admin dan kirim bukti transfer. Setelah
+                                        pembayaran Anda berhasil admin verifikasi, tiket akan segera dikirimkan ke
                                         email yang Anda cantumkan pada formulir.
                                     </p>
                                     <p class="text-center" style="color: #5a2d67;">
