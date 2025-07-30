@@ -455,7 +455,7 @@
 
         <section class="order-information">
             <h2>Informasi Pesanan / Order Information</h2>
-            <span class="ticket-count">TICKET 1 of 1</span>
+            <span class="ticket-count">TICKET {{ $transaksi->jumlah_tiket }}</span>
 
             <div class="order-details-grid">
                 <div class="order-item">
