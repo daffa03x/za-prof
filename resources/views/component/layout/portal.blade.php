@@ -5,8 +5,10 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Zillenial Action</title>
-    <meta name="description" content="">
-    <meta name="keywords" content="">
+    <meta name="description"
+        content="Zillenial Action adalah sebuah yayasan yang didirikan oleh anak muda Indonesia dengan
+                                semangat untuk mendorong perubahan positif dan berkelanjutan.">
+    <meta name="keywords" content="yayasan yang didirikan oleh anak muda Indonesia">
 
     <!-- Favicons -->
     <link href="{{ asset('assets/img/Logo-ZA.png') }}" rel="icon">

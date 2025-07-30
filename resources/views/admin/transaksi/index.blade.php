@@ -92,8 +92,7 @@
                                     <td>{{ $item->tanggal_register }}</td>
                                     <td id="status-{{ $item->id }}">
                                         @if ($item->status_pembayaran === 'Success')
-                                            <button onclick="updateStatus('{{ $item->id }}');"
-                                                class="btn btn-sm btn-success m-1">Y</button>
+                                            <button class="btn btn-sm btn-success m-1">Y</button>
                                         @elseif($item->status_pembayaran === 'Failed')
                                             <button onclick="updateStatus('{{ $item->id }}');"
                                                 class="btn btn-sm btn-danger m-1">N</button>
