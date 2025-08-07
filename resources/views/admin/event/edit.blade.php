@@ -153,8 +153,7 @@
                                     <label for="jumlah_tiket">Jumlah Tiket</label>
                                     <input type="number"
                                         class="form-control @error('jumlah_tiket') is-invalid @enderror"
-                                        name="jumlah_tiket" value="{{ old('jumlah_tiket', $data->jumlah_tiket) }}"
-                                        readonly>
+                                        name="jumlah_tiket" value="{{ old('jumlah_tiket', $data->jumlah_tiket) }}">
                                     @error('jumlah_tiket')
                                         <span class="invalid-feedback" role="alert">
                                             <strong>{{ $message }}</strong>
