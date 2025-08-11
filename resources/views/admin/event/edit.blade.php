@@ -165,7 +165,8 @@
                                 <label for="deskripsi">Deskripsi/Syarat dan Ketentuan</label>
                                 <!-- Create the editor container -->
                                 <div id="editor">
-                                    {{ old('deskripsi', strip_tags($data->deskripsi)) }}
+                                    {{-- {{ old('deskripsi', strip_tags($data->deskripsi)) }} --}}
+                                    {!! $data->deskripsi !!}
                                 </div>
                                 <input type="hidden" name="deskripsi" id="content">
                             </div>
