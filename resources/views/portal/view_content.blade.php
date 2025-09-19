@@ -36,7 +36,7 @@
             s.parentNode.insertBefore(t, s)
         }(window, document, 'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '{your-pixel-id-goes-here}');
+        fbq('init', '824012039961095');
         fbq('track', 'PageView');
 
         // Menambahkan custom parameter
@@ -47,7 +47,7 @@
     </script>
     <noscript>
         <img height="1" width="1" style="display:none"
-            src="https://www.facebook.com/tr?id={your-pixel-id-goes-here}&ev=PageView&noscript=1" />
+            src="https://www.facebook.com/tr?id=824012039961095&ev=PageView&noscript=1" />
     </noscript>
     <!-- End Facebook Pixel Code -->
 
