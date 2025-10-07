@@ -32,7 +32,7 @@ class PortalController extends Controller
 
     public function index(Request $request)
     {
-        $event = Event::orderByDesc('id')->get();
+        $event = Event::orderByDesc('id')->limit(6)->get();
 
         return view('portal.index', compact('event'));
     }
