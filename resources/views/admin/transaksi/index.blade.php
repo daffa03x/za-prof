@@ -65,9 +65,10 @@
                                 {{-- <th>Id</th> --}}
                                 <th>Invoice</th>
                                 <th>Event</th>
-                                <th>Nama</th>
-                                <th>Email</th>
-                                <th>Telepon</th>
+                                <th>Nama Pembeli</th>
+                                <th>Email Pembeli</th>
+                                <th>Telepon Pembeli</th>
+                                <th>Volunteer</th>
                                 <th>Jumlah Tiket</th>
                                 <th>Total Pembayaran</th>
                                 <th>Tanggal Register</th>
@@ -87,6 +88,15 @@
                                     <td>{{ $item->name }}</td>
                                     <td>{{ $item->email }}</td>
                                     <td>{{ $item->telepon }}</td>
+                                    <td>
+                                        <ul>
+                                            @foreach ($item->volunteers as $volunteer)
+                                                <li>
+                                                    {{ $volunteer->name }}
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </td>
                                     <td>{{ $item->jumlah_tiket }}</td>
                                     <td>@rupiah($item->total_pembayaran)</td>
                                     <td>{{ $item->tanggal_register }}</td>
