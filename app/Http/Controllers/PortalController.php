@@ -168,7 +168,7 @@ class PortalController extends Controller
     public function tiket($invoice)
     {
         try {
-            $transaksi = Transaksi::with("event")->where('invoice',$invoice)->where('status_pembayaran',"Success")->first();
+            $transaksi = Transaksi::with("event", "volunteers")->where('invoice',$invoice)->where('status_pembayaran',"Success")->first();
             if($transaksi){
                 return view('portal.tiket', compact('transaksi'));
             }else{
