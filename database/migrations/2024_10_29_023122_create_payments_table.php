@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('image')->nullable();
+            $table->string('no_rek');
             $table->boolean('status')->default(0);
             $table->timestamps();
             $table->softDeletes();
