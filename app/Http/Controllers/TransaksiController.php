@@ -7,6 +7,7 @@ use App\Models\Transaksi;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Exports\ExportTransaksi;
+use DB;
 use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Http\Requests\StoreTransaksiRequest;
@@ -304,7 +305,17 @@ class TransaksiController extends Controller
 
         $transaksi = Transaksi::find($id);
 
-        Mail::to($transaksi->email)->send(new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/$transaksi->invoice"));
+        $datas = DB::table('transaksi_volunteers')
+            ->join('volunteers', 'transaksi_volunteers.id_volunteer', '=', 'volunteers.id')
+            ->where('transaksi_volunteers.id_transaksi', $id)
+            ->select('volunteers.email AS volunteer_email')
+            ->get();
+
+
+        foreach ($datas as $data) {
+            Mail::to($data->volunteer_email)->send(new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/$transaksi->invoice"));
+        }
+        // Mail::to($transaksi->email)->send(new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/$transaksi->invoice"));
    
         if ($transaksi) {
             $data = [
