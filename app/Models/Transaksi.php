@@ -30,7 +30,7 @@ class Transaksi extends Model
 
     public function getRouteKeyName()
     {
-        return 'invoice'; // Laravel akan mencari Transaksi berdasarkan kolom 'invoice'
+        return 'invoice';
     }
 
     public function event()
@@ -42,6 +42,13 @@ class Transaksi extends Model
     {
         return $this->belongsTo(Payment::class, 'id_payment'); 
     }
+
+    public function volunteers()
+    {
+        return $this->belongsToMany(Volunteer::class, 'transaksi_volunteers', 'id_transaksi', 'id_volunteer')
+                    ->withTimestamps();
+    }
+
 
     public $timestamps = true;
 }
