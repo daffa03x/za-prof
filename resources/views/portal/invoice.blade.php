@@ -212,10 +212,26 @@
                                             // Menyalin teks ke clipboard
                                             try {
                                                 document.execCommand('copy');
-                                                alert('Nomor rekening berhasil disalin: ' + textToCopy);
+                                                Swal.fire({
+                                                    icon: 'success',
+                                                    title: 'Berhasil',
+                                                    text: 'Nomor rekening berhasil disalin: ' + textToCopy,
+                                                    toast: true,
+                                                    position: 'top-end',
+                                                    timer: 3000,
+                                                    showConfirmButton: false
+                                                });
                                             } catch (err) {
                                                 console.error('Gagal menyalin: ', err);
-                                                alert('Gagal menyalin nomor rekening. Silakan salin secara manual: ' + textToCopy);
+                                                Swal.fire({
+                                                    icon: 'error',
+                                                    title: 'Gagal',
+                                                    text: 'Gagal menyalin nomor rekening. Silakan salin secara manual: ' + textToCopy,
+                                                    toast: true,
+                                                    position: 'top-end',
+                                                    timer: 3000,
+                                                    showConfirmButton: false
+                                                });
                                             }
 
                                             // Menghapus area teks sementara
@@ -303,6 +319,7 @@
 
     </main>
     @include('component.layout.footer')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Ambil tanggal register dari PHP, lalu tambahkan 24 jam (atau deadline yang sudah dihitung)
@@ -353,6 +370,15 @@
                     clearInterval(countdownInterval); // Hentikan timer
                     countdownElement.innerHTML = "00 : 00 : 00";
                     alert("Waktu pembayaran telah berakhir!");
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: 'Waktu pembayaran telah berakhir!',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
                     // Anda bisa menambahkan logika lain di sini, seperti menonaktifkan tombol pembayaran
                     // atau mengubah status transaksi di backend via AJAX request.
                 }

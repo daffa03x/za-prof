@@ -103,27 +103,57 @@
                 <div class="container">
                     <!-- Menampilkan Notifikasi Sukses -->
                     @if (session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
+                        <script>
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil',
+                                text: {{ session('success') }},
+                                toast: true,
+                                position: 'top-end',
+                                timer: 3000,
+                                showConfirmButton: false
+
+                            });
+                        </script>
                     @endif
 
                     <!-- Menampilkan Notifikasi Error -->
                     @if (session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
+                        <script>
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal',
+                                text: {{ session('error') }},
+                                toast: true,
+                                position: 'top-end',
+                                timer: 3000,
+                                showConfirmButton: false
+
+                            });
+                        </script>
                     @endif
 
                     <!-- Menampilkan Pesan Validasi Error -->
                     @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
+                        {{-- <div class="alert alert-danger">
+                            <ul> --}}
+                        @foreach ($errors->all() as $error)
+                            {{-- <li>{{ $error }}</li> --}}
+                            <script>
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Cek Form',
+                                    text: {{ $error }},
+                                    toast: true,
+                                    position: 'top-end',
+                                    timer: 3000,
+                                    showConfirmButton: false
+
+                                });
+                            </script>
+                        @endforeach
+                        {{-- </ul>
+                        </div> --}}
                     @endif
                     <div class="row d-flex justify-content-center text-center">
                         <div class="col-lg-8">
@@ -147,7 +177,8 @@
 
             <div class="container" data-aos="fade-up" data-aos-delay="100">
 
-                <form action="{{ route('transaksi.post', ['id' => $data->id]) }}" method="POST">
+                <form action="{{ route('transaksi.post', ['id' => $data->id]) }}" method="POST"
+                    onsubmit="return validatePayment()">
                     @csrf
                     <div class="row gy-4">
 
@@ -211,10 +242,8 @@
                                         @foreach ($payment as $item)
                                             <label
                                                 class="list-group-item d-flex justify-content-between align-items-center">
-                                                <!-- Elemen Radio di Kiri -->
                                                 <input type="radio" name="payment" value="{{ $item->id }}"
                                                     class="form-check-input mx-3">
-                                                <!-- Elemen Gambar dan Nama -->
                                                 <div class="d-flex justify-content-end align-items-center flex-grow-1">
                                                     <img src="{{ asset($item->image) }}" alt="{{ $item->name }}"
                                                         class="me-2" style="width: 110px; height: 40px;">
@@ -224,6 +253,26 @@
                                         @endforeach
                                     </div>
                                 </div>
+                                <script>
+                                    function validatePayment() {
+                                        const selected = document.querySelector('input[name="payment"]:checked');
+                                        if (!selected) {
+                                            // Jika tidak ada metode yang dipilih
+                                            Swal.fire({
+                                                icon: 'warning',
+                                                title: 'Metode Pembayaran Belum Dipilih!',
+                                                text: 'Silakan pilih salah satu metode pembayaran.',
+                                                toast: true,
+                                                position: 'top-end',
+                                                timer: 3000,
+                                                showConfirmButton: false
+
+                                            });
+                                            return false; // mencegah form submit
+                                        }
+                                        return true; // izinkan submit jika sudah dipilih
+                                    }
+                                </script>
                             </div>
                         </div>
 
@@ -311,7 +360,7 @@
 
     </main>
     @include('component.layout.footer')
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // JavaScript untuk menangani jumlah
         let counter = 1; // Ubah default dari 0 menjadi 1
@@ -422,14 +471,30 @@
         document.getElementById('increase-btn').addEventListener('click', () => {
             if (counter < jumlah_tiket) {
                 if (counter >= 3) {
-                    alert('Maksimal tiket hanya 3');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: 'Maksimal tiket hanya 3!',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
                 } else {
                     counter++;
                     jumlahTiketInput.value = counter;
                     updateTotalPriceAndCounter();
                 }
             } else {
-                alert('Sisa Tiket Hanya Ada ' + jumlah_tiket);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: 'Sisa Tiket Hanya Ada ' + jumlah_tiket,
+                    toast: true,
+                    position: 'top-end',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
             }
         });
 
