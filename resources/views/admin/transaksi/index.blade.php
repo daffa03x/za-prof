@@ -92,7 +92,7 @@
                                         <ul>
                                             @foreach ($item->volunteers as $volunteer)
                                                 <li>
-                                                    {{ $volunteer->name }}
+                                                    {{ $volunteer->name }} - {{ $volunteer->telepon }}
                                                 </li>
                                             @endforeach
                                         </ul>
