@@ -50,7 +50,7 @@
         <img height="1" width="1" style="display:none"
             src="https://www.facebook.com/tr?id=824012039961095&ev=PageView&noscript=1" />
     </noscript>
-    <!-- End Facebook Pixel Code -->
+    <!-- End Facebook Pixel Code -->
 
     <!-- TikTok Pixel Code Start -->
     <script>
@@ -93,7 +93,7 @@
 
         }(window, document, 'ttq');
     </script>
-    <!-- TikTok Pixel Code End -->
+    <!-- TikTok Pixel Code End -->
 
     <main class="main">
 
@@ -103,27 +103,57 @@
                 <div class="container">
                     <!-- Menampilkan Notifikasi Sukses -->
                     @if (session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
+                        <script>
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil',
+                                text: {{ session('success') }},
+                                toast: true,
+                                position: 'top-end',
+                                timer: 3000,
+                                showConfirmButton: false
+
+                            });
+                        </script>
                     @endif
 
                     <!-- Menampilkan Notifikasi Error -->
                     @if (session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
+                        <script>
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal',
+                                text: {{ session('error') }},
+                                toast: true,
+                                position: 'top-end',
+                                timer: 3000,
+                                showConfirmButton: false
+
+                            });
+                        </script>
                     @endif
 
                     <!-- Menampilkan Pesan Validasi Error -->
                     @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
+                        {{-- <div class="alert alert-danger">
+                            <ul> --}}
+                        @foreach ($errors->all() as $error)
+                            {{-- <li>{{ $error }}</li> --}}
+                            <script>
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Cek Form',
+                                    text: {{ $error }},
+                                    toast: true,
+                                    position: 'top-end',
+                                    timer: 3000,
+                                    showConfirmButton: false
+
+                                });
+                            </script>
+                        @endforeach
+                        {{-- </ul>
+                        </div> --}}
                     @endif
                     <div class="row d-flex justify-content-center text-center">
                         <div class="col-lg-8">
@@ -147,7 +177,8 @@
 
             <div class="container" data-aos="fade-up" data-aos-delay="100">
 
-                <form action="{{ route('transaksi.post', ['id' => $data->id]) }}" method="POST">
+                <form action="{{ route('transaksi.post', ['id' => $data->id]) }}" method="POST"
+                    onsubmit="return validatePayment()">
                     @csrf
                     <div class="row gy-4">
 
@@ -158,42 +189,11 @@
 
                                 <div class="swiper-wrapper align-items-center">
                                     <div class="w-100 p-3">
-                                        <div class="form-group py-2">
-                                            <label for="name">Nama Lengkap</label>
-                                            <input type="text" class="form-control" id="name" name="name"
-                                                placeholder="Gunakan nama yang tertera di KTP/Paspor.">
-                                        </div>
-                                        <div class="form-group py-2">
-                                            <label for="telepon">Nomor Ponsel</label>
-                                            <div class="input-group">
-                                                <div class="input-group-prepend">
-                                                    <span class="input-group-text" id="basic-addon1">+62</span>
-                                                </div>
-                                                <input type="text" class="form-control" id="telepon" name="telepon"
-                                                    placeholder="Nomor Ponsel" aria-label="Nomor Ponsel"
-                                                    aria-describedby="basic-addon1">
-                                            </div>
+                                        <!-- Container untuk form data diri yang akan di-generate dinamis -->
+                                        <div id="form-data-diri-container">
+                                            <!-- Form akan ditambahkan di sini secara dinamis -->
                                         </div>
 
-                                        <div class="form-group py-2 mb-2">
-                                            <label for="email">Email</label>
-                                            <input type="text" class="form-control" id="email" name="email"
-                                                placeholder="E-tiket akan dikirim ke email kamu.">
-                                        </div>
-                                        {{-- <div class="row py-2 mb-2">
-                                            <div class="form-group col-lg-8">
-                                                <label for="inputState">Tanggal lahir</label>
-                                                <input type="date" class="form-control" name="tanggal_lahir"
-                                                    id="inputAddress2">
-                                            </div>
-                                            <div class="form-group col-lg-4">
-                                                <label for="inputZip">Jenis Kelamin</label>
-                                                <select id="inputState" name="jenis_kelamin" class="form-control">
-                                                    <option value="L">Laki Laki</option>
-                                                    <option value="P">Perempuan</option>
-                                                </select>
-                                            </div>
-                                        </div> --}}
                                         <div class="card-price py-2">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 @php
@@ -216,19 +216,19 @@
                                                     <button class="btn btn-circle text-white"
                                                         style="background-color: #5a2d67" type="button"
                                                         id="decrease-btn">-</button>
-                                                    <span class="mx-3 font-weight-bold" id="counter">0</span>
+                                                    <span class="mx-3 font-weight-bold" id="counter">1</span>
                                                     <button class="btn btn-circle text-white"
                                                         style="background-color: #5a2d67" type="button"
                                                         id="increase-btn">+</button>
                                                     <input type="hidden" id="jumlah_tiket_input" name="jumlah_tiket"
-                                                        value="0">
+                                                        value="1">
                                                 </div>
                                                 <div>
                                                     <!-- Total Harga -->
-                                                    <h5 class="mb-0" id="total-price-display">@rupiah(0)</h5>
+                                                    <h5 class="mb-0" id="total-price-display">@rupiah($data['harga'])</h5>
                                                     <input type="hidden" name="price"
                                                         class="form-control text-right mb-2" id="total-price-input"
-                                                        readonly>
+                                                        value="{{ $data['harga'] }}" readonly>
                                                 </div>
                                             </div>
                                         </div>
@@ -242,10 +242,8 @@
                                         @foreach ($payment as $item)
                                             <label
                                                 class="list-group-item d-flex justify-content-between align-items-center">
-                                                <!-- Elemen Radio di Kiri -->
                                                 <input type="radio" name="payment" value="{{ $item->id }}"
                                                     class="form-check-input mx-3">
-                                                <!-- Elemen Gambar dan Nama -->
                                                 <div class="d-flex justify-content-end align-items-center flex-grow-1">
                                                     <img src="{{ asset($item->image) }}" alt="{{ $item->name }}"
                                                         class="me-2" style="width: 110px; height: 40px;">
@@ -255,6 +253,26 @@
                                         @endforeach
                                     </div>
                                 </div>
+                                <script>
+                                    function validatePayment() {
+                                        const selected = document.querySelector('input[name="payment"]:checked');
+                                        if (!selected) {
+                                            // Jika tidak ada metode yang dipilih
+                                            Swal.fire({
+                                                icon: 'warning',
+                                                title: 'Metode Pembayaran Belum Dipilih!',
+                                                text: 'Silakan pilih salah satu metode pembayaran.',
+                                                toast: true,
+                                                position: 'top-end',
+                                                timer: 3000,
+                                                showConfirmButton: false
+
+                                            });
+                                            return false; // mencegah form submit
+                                        }
+                                        return true; // izinkan submit jika sudah dipilih
+                                    }
+                                </script>
                             </div>
                         </div>
 
@@ -342,14 +360,92 @@
 
     </main>
     @include('component.layout.footer')
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // JavaScript untuk menangani jumlah
-        let counter = 0;
+        let counter = 1; // Ubah default dari 0 menjadi 1
         const jumlah_tiket = @json($data['jumlah_tiket']);
         const pricePerItem = @json($data['harga']);
         let jumlahTiketInput = document.getElementById('jumlah_tiket_input');
-        const counterDisplay = document.getElementById('counter'); // Ambil referensi ke elemen counter
+        const counterDisplay = document.getElementById('counter');
+        const formContainer = document.getElementById('form-data-diri-container');
+
+        // Fungsi untuk membuat form data diri
+        function generateFormDataDiri(index) {
+            const arrayIndex = index - 1; // Convert to 0-based index for array
+            return `
+            <div class="card mb-3 p-3" style="border: 1px solid #dee2e6; border-radius: 8px;" id="form-tiket-${index}">
+                <h5 class="mb-3" style="color: #5a2d67; font-weight: bold;">Data Volunteer ${index}</h5>
+                <div class="form-group py-2">
+                    <label for="name_${index}">Nama Lengkap</label>
+                    <input type="text" class="form-control" id="name_${index}" name="pengunjung[${arrayIndex}][name]"
+                        placeholder="Masukan Nama Anda" required>
+                </div>
+                <div class="form-group py-2">
+                    <label for="telepon_${index}">Nomor Ponsel</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="basic-addon-${index}">+62</span>
+                        </div>
+                        <input type="text" class="form-control" id="telepon_${index}" name="pengunjung[${arrayIndex}][telepon]"
+                            placeholder="Nomor Ponsel" aria-label="Nomor Ponsel"
+                            aria-describedby="basic-addon-${index}" required>
+                    </div>
+                </div>
+                <div class="form-group py-2 mb-2">
+                    <label for="email_${index}">Email</label>
+                    <input type="email" class="form-control" id="email_${index}" name="pengunjung[${arrayIndex}][email]"
+                        placeholder="E-tiket akan dikirim ke email kamu." required>
+                </div>
+            </div>
+        `;
+        }
+
+        // Object untuk menyimpan data form sementara
+        let formData = {};
+
+        // Fungsi untuk menyimpan data form yang sudah diisi
+        function saveFormData() {
+            const forms = formContainer.querySelectorAll('.card');
+            forms.forEach((form, idx) => {
+                const index = idx + 1;
+                const nameInput = document.getElementById(`name_${index}`);
+                const teleponInput = document.getElementById(`telepon_${index}`);
+                const emailInput = document.getElementById(`email_${index}`);
+
+                if (nameInput && teleponInput && emailInput) {
+                    formData[index] = {
+                        name: nameInput.value,
+                        telepon: teleponInput.value,
+                        email: emailInput.value
+                    };
+                }
+            });
+        }
+
+        // Fungsi untuk memperbarui form data diri
+        function updateFormDataDiri() {
+            // Simpan data yang sudah diisi sebelum update
+            saveFormData();
+
+            formContainer.innerHTML = '';
+            for (let i = 1; i <= counter; i++) {
+                formContainer.innerHTML += generateFormDataDiri(i);
+            }
+
+            // Kembalikan data yang sudah diisi sebelumnya
+            for (let i = 1; i <= counter; i++) {
+                if (formData[i]) {
+                    const nameInput = document.getElementById(`name_${i}`);
+                    const teleponInput = document.getElementById(`telepon_${i}`);
+                    const emailInput = document.getElementById(`email_${i}`);
+
+                    if (nameInput) nameInput.value = formData[i].name || '';
+                    if (teleponInput) teleponInput.value = formData[i].telepon || '';
+                    if (emailInput) emailInput.value = formData[i].email || '';
+                }
+            }
+        }
 
         // Fungsi untuk memperbarui total harga dan tampilan counter
         function updateTotalPriceAndCounter() {
@@ -362,26 +458,52 @@
             document.getElementById('total-price-display').innerText = `Rp ${totalPrice.toLocaleString('id-ID')}`;
 
             // Perbarui nilai di elemen <span> counter
-            counterDisplay.innerText = counter; // BARIS INI DITAMBAHKAN/DIPINDAHKAN KE SINI
+            counterDisplay.innerText = counter;
+
+            // Update form data diri
+            updateFormDataDiri();
         }
+
+        // Inisialisasi form pertama kali saat halaman load
+        updateFormDataDiri();
 
         // Tombol tambah
         document.getElementById('increase-btn').addEventListener('click', () => {
             if (counter < jumlah_tiket) {
-                counter++;
-                jumlahTiketInput.value = counter; // Update nilai hidden input
-                updateTotalPriceAndCounter(); // Panggil fungsi update yang baru
+                if (counter >= 3) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: 'Maksimal tiket hanya 3!',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    counter++;
+                    jumlahTiketInput.value = counter;
+                    updateTotalPriceAndCounter();
+                }
             } else {
-                alert('Sisa Tiket Hanya Ada ' + jumlah_tiket);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: 'Sisa Tiket Hanya Ada ' + jumlah_tiket,
+                    toast: true,
+                    position: 'top-end',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
             }
         });
 
         // Tombol kurang
         document.getElementById('decrease-btn').addEventListener('click', () => {
-            if (counter > 0) {
+            if (counter > 1) { // Ubah dari > 0 menjadi > 1 agar minimal 1 tiket
                 counter--;
-                jumlahTiketInput.value = counter; // Update nilai hidden input
-                updateTotalPriceAndCounter(); // Panggil fungsi update yang baru
+                jumlahTiketInput.value = counter;
+                updateTotalPriceAndCounter();
             }
         });
 
@@ -389,12 +511,9 @@
             if (checkbox.checked) {
                 checkbox.style.backgroundColor = '#5a2d67';
                 checkbox.style.borderColor = '#5a2d67';
-                // Untuk ikon centang, ini sedikit lebih rumit dengan JavaScript inline
-                // karena ikon adalah background-image. Anda mungkin perlu kelas CSS yang sudah didefinisikan.
-                // Atau, jika Anda tidak peduli dengan ikon centang dan hanya backgroundnya.
             } else {
-                checkbox.style.backgroundColor = ''; // Mengembalikan ke default Bootstrap
-                checkbox.style.borderColor = ''; // Mengembalikan ke default Bootstrap
+                checkbox.style.backgroundColor = '';
+                checkbox.style.borderColor = '';
             }
         }
     </script>

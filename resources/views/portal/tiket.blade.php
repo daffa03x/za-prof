@@ -12,7 +12,6 @@
             margin: 0;
             padding: 20px;
             background-color: #f0f2f5;
-            /* Light gray background */
             display: flex;
             justify-content: center;
             align-items: flex-start;
@@ -22,7 +21,6 @@
         .container {
             width: 100%;
             max-width: 800px;
-            /* Adjust as needed */
             background-color: #ffffff;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -43,7 +41,6 @@
 
         img.icon {
             width: 16px;
-            /* Adjust icon size */
             height: 16px;
             margin-right: 8px;
             vertical-align: middle;
@@ -56,13 +53,11 @@
             align-items: center;
             padding: 15px 30px;
             background-color: #5a2d67;
-            /* Changed to #5a2d67 */
             color: white;
         }
 
         .header .logo img {
             height: 30px;
-            /* Adjust logo size */
         }
 
         .e-voucher {
@@ -80,19 +75,16 @@
             font-size: 1.8em;
             margin-bottom: 20px;
             color: #5a2d67;
-            /* Changed to #5a2d67 */
         }
 
         .event-details {
             display: flex;
             gap: 20px;
             position: relative;
-            /* For Zillenial Action logo positioning */
         }
 
         .event-details .event-image img {
             width: 250px;
-            /* Fixed width for event image */
             height: auto;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -111,11 +103,9 @@
             top: 0;
             right: 0;
             width: 80px;
-            /* Adjust size as needed */
             height: 80px;
             border-radius: 50%;
             background-color: #f0f2f5;
-            /* Light background for the logo circle */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -133,7 +123,6 @@
             padding: 30px;
             border-bottom: 1px solid #eee;
             position: relative;
-            /* Keep this for ticket-count positioning */
         }
 
         .order-information h2 {
@@ -150,31 +139,20 @@
             right: 30px;
         }
 
-        /* NEW CONTAINER FOR ORDER DETAILS AND BARCODE */
         .order-section-content {
             display: flex;
-            /* Use flexbox to align grid and barcode side-by-side */
             justify-content: space-between;
-            /* Space out the two columns */
             align-items: flex-start;
-            /* Align items to the top */
             gap: 30px;
-            /* Gap between the two columns */
             flex-wrap: wrap;
-            /* Allow wrapping on smaller screens */
             margin-top: 20px;
-            /* Add a bit of space below the section title */
         }
 
         .order-details-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px 30px;
-            /* Row gap, column gap */
-            /* margin-bottom: 25px; /* Removed, managed by flex container */
-            /* padding-right: 180px; /* Removed, managed by flex container */
             flex-grow: 1;
-            /* Allow grid to grow and take available space */
         }
 
         .order-details-grid .order-item {
@@ -196,22 +174,69 @@
 
         .order-details-grid .order-item .invoice-code {
             color: #5a2d67;
-            /* Changed to #5a2d67 */
+        }
+
+        /* Volunteers Section Styling */
+        .volunteers-section {
+            grid-column: 1 / -1;
+        }
+
+        .volunteers-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .volunteer-card {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #5a2d67 0%, #7a3d87 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(90, 45, 103, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .volunteer-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(90, 45, 103, 0.3);
+        }
+
+        .volunteer-avatar {
+            width: 24px;
+            height: 24px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .volunteer-avatar svg {
+            width: 14px;
+            height: 14px;
+            fill: white;
+        }
+
+        .volunteer-name {
+            font-size: 0.9em;
+            font-weight: 500;
+            color: white !important;
         }
 
         /* Barcode Section */
         .barcode-section {
-            /* Removed: position: absolute, top, right properties */
             width: 180px;
-            /* Adjusted width for better fit within flexbox */
             flex-shrink: 0;
-            /* Prevent barcode section from shrinking too much */
             text-align: center;
             background-color: #f9f9f9;
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
-            /* Removed: margin-top if it was specifically for absolute positioning */
         }
 
         .barcode-section .item-price {
@@ -229,7 +254,6 @@
             font-size: 1.3em;
             font-weight: bold;
             color: #5a2d67;
-            /* Changed to #5a2d67 */
         }
 
         .barcode-image img {
@@ -241,13 +265,10 @@
 
         .barcode-number {
             font-family: 'Courier New', monospace;
-            /* Monospace for barcode number */
             font-size: 0.8em;
             color: #333;
             word-break: break-all;
-            /* Ensure long numbers wrap */
         }
-
 
         /* Terms & Conditions Section */
         .terms-conditions {
@@ -262,7 +283,6 @@
 
         .terms-conditions ul {
             list-style: none;
-            /* Remove default bullet points */
             padding: 0;
             margin: 0;
         }
@@ -273,13 +293,12 @@
             margin-bottom: 10px;
             padding-left: 25px;
             position: relative;
+            margin-left: 25px
         }
 
         .terms-conditions li::before {
             content: '•';
-            /* Custom bullet point */
             color: #5a2d67;
-            /* Changed to #5a2d67 */
             font-weight: bold;
             display: inline-block;
             width: 1em;
@@ -292,40 +311,23 @@
         /* Footer */
         .footer {
             background-color: #f8f9fa;
-            /* Light background for footer */
             padding: 20px 30px;
             display: flex;
             justify-content: flex-start;
-            /* Align items to the start */
             align-items: center;
             flex-wrap: wrap;
-            /* Allow items to wrap on smaller screens */
             gap: 20px;
-            /* Add gap for spacing between the logo and first contact item, and between contact items */
         }
 
         .footer .footer-logo {
             height: 25px;
-            /* Adjust logo size */
-            /* margin-right: 20px; REMOVE THIS - using gap on parent */
         }
 
-        /* Pastikan contact-item berada dalam satu baris */
         .footer-contact {
-            /* This class seems to be the container for logo and contact items */
             display: flex;
-            /* Make this a flex container */
             flex-wrap: wrap;
-            /* Allow wrapping */
             align-items: center;
-            /* Vertically align items */
             gap: 20px;
-            /* Space between logo and contact items */
-            /* Jika footer-contact ini adalah wadah untuk semua item kontak saja tanpa logo, */
-            /* maka flex-direction: row; akan ada di sini. */
-            /* Namun, berdasarkan HTML sebelumnya, footer-contact adalah keseluruhan div */
-            /* yang berisi logo dan semua contact-item. Jadi, gap dan flex-wrap di parent .footer sudah cukup. */
-            /* Mari kita pastikan .contact-item sendiri tidak memiliki flex-direction: column; */
         }
 
         .footer .contact-item {
@@ -333,11 +335,45 @@
             align-items: center;
             font-size: 0.85em;
             color: #555;
-            /* Pastikan tidak ada flex-direction: column; di sini */
+            text-decoration: none;
+        }
+
+        .footer .contact-item:hover {
+            color: #5a2d67;
         }
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 0;
+            }
+
+            .header {
+                padding: 12px 20px;
+                flex-wrap: wrap;
+            }
+
+            .header .logo img {
+                height: 25px;
+            }
+
+            .e-voucher {
+                font-size: 1em;
+            }
+
+            .event-info {
+                padding: 20px;
+            }
+
+            .event-info .event-title h1 {
+                font-size: 1.4em;
+                margin-bottom: 15px;
+            }
+
             .event-details {
                 flex-direction: column;
                 align-items: center;
@@ -347,56 +383,163 @@
                 margin-bottom: 20px;
             }
 
-            .zillenial-action {
-                position: static;
-                /* Reset positioning on small screens */
-                margin-top: 20px;
+            .event-details .event-image img {
+                width: 100%;
+                max-width: 300px;
             }
 
-            /* Adjustments for order section on small screens */
+            .event-details .details-content {
+                width: 100%;
+            }
+
+            .event-details .detail-item {
+                font-size: 0.9em;
+            }
+
+            .zillenial-action {
+                position: static;
+                margin-top: 20px;
+                width: 60px;
+                height: 60px;
+            }
+
+            .order-information {
+                padding: 20px;
+            }
+
+            .order-information h2 {
+                font-size: 1.2em;
+                margin-bottom: 30px;
+            }
+
+            .order-information .ticket-count {
+                position: static;
+                display: block;
+                margin-top: 5px;
+                margin-bottom: 15px;
+            }
+
             .order-section-content {
                 flex-direction: column;
-                /* Stack columns vertically on small screens */
                 align-items: center;
-                /* Center items when stacked */
                 gap: 20px;
-                /* Adjust gap for stacked layout */
+                margin-top: 10px;
             }
 
             .order-details-grid {
                 width: 100%;
-                /* Take full width when stacked */
                 grid-template-columns: 1fr;
-                /* Single column on small screens */
+                gap: 20px;
+            }
+
+            .volunteers-section {
+                grid-column: 1;
+            }
+
+            .volunteers-list {
+                gap: 8px;
+            }
+
+            .volunteer-card {
+                padding: 6px 12px;
+                font-size: 0.9em;
+            }
+
+            .volunteer-avatar {
+                width: 20px;
+                height: 20px;
+            }
+
+            .volunteer-avatar svg {
+                width: 12px;
+                height: 12px;
             }
 
             .barcode-section {
-                width: 80%;
-                /* Adjust width for barcode on small screens when stacked */
+                width: 100%;
+                max-width: 250px;
                 margin-top: 0;
-                /* Reset margin-top for barcode section in stacked layout */
+            }
+
+            .terms-conditions {
+                padding: 20px;
+            }
+
+            .terms-conditions h2 {
+                font-size: 1.2em;
+            }
+
+            .terms-conditions li {
+                font-size: 0.9em;
+                padding-left: 20px;
             }
 
             .footer {
+                padding: 15px 20px;
                 flex-direction: column;
-                /* Stack columns vertically on small screens */
                 align-items: flex-start;
-                /* Align items to the start when stacked */
+                gap: 15px;
             }
 
             .footer .footer-logo {
                 margin-right: 0;
-                margin-bottom: 15px;
-                /* Add margin when stacked */
+                margin-bottom: 10px;
+                height: 22px;
             }
 
             .footer-contact {
-                /* If this is the main contact wrapper */
                 flex-direction: column;
-                /* Ensure contact items stack vertically on small screens */
                 align-items: flex-start;
-                gap: 10px;
-                /* Smaller gap when stacked */
+                gap: 12px;
+                width: 100%;
+            }
+
+            .footer .contact-item {
+                font-size: 0.8em;
+                word-break: break-word;
+            }
+
+            .footer .contact-item svg {
+                flex-shrink: 0;
+            }
+        }
+
+        /* Tablet adjustments */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                max-width: 700px;
+            }
+
+            .event-details .event-image img {
+                width: 220px;
+            }
+
+            .order-section-content {
+                gap: 20px;
+            }
+
+            .barcode-section {
+                width: 160px;
+            }
+        }
+
+        /* Small mobile adjustments */
+        @media (max-width: 480px) {
+            .event-info .event-title h1 {
+                font-size: 1.2em;
+            }
+
+            .volunteer-card {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .order-details-grid .order-item .label {
+                font-size: 0.8em;
+            }
+
+            .order-details-grid .order-item .value {
+                font-size: 0.95em;
             }
         }
     </style>
@@ -458,9 +601,38 @@
             <span class="ticket-count">TICKET {{ $transaksi->jumlah_tiket }}</span>
 
             <div class="order-details-grid">
-                <div class="order-item">
-                    <span class="label">Nama / Name</span>
-                    <span class="value">{{ $transaksi->name }}</span>
+                <div class="order-item volunteers-section">
+                    <span class="label">Nama Volunteer / Name Volunteer</span>
+                    @if ($transaksi->volunteers->isEmpty())
+                        <div class="volunteers-list">
+                            <div class="volunteer-card">
+                                <div class="volunteer-avatar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                        fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                                        <path fill-rule="evenodd"
+                                            d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1" />
+                                    </svg>
+                                </div>
+                                <span class="value volunteer-name">{{ $transaksi->name }}</span>
+                            </div>
+                        </div>
+                    @endif
+                    <div class="volunteers-list">
+                        @foreach ($transaksi->volunteers as $volunteer)
+                            <div class="volunteer-card">
+                                <div class="volunteer-avatar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                        fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                                        <path fill-rule="evenodd"
+                                            d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1" />
+                                    </svg>
+                                </div>
+                                <span class="value volunteer-name">{{ $volunteer->name }}</span>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
                 <div class="order-item">
                     <span class="label">Kode Tagihan / Invoice Code</span>
