@@ -2,26 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'payments';
     protected $fillable = [
         'name',
         'no_rek',
         'image',
-        'status'
+        'status',
     ];
 
-    public $timestamps = true;
+    protected $casts = [
+        'status' => 'boolean',
+    ];
 
-    public function transaksi()
+    public function transaksis(): HasMany
     {
-        return $this->HasOne(Transaksi::class, 'id_payment');
+        return $this->hasMany(Transaksi::class, 'payment_id');
     }
 }

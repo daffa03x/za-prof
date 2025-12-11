@@ -11,16 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pixels', function (Blueprint $table) {
+        Schema::create('kode_vouchers', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('type');
             $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+            $table->string('name_voucher')->unique();
+            $table->string('kode')->unique();
+            $table->unsignedInteger('nilai_diskon');
+            $table->unsignedInteger('kuota');
+            $table->unsignedInteger('digunakan')->default(0);
+            $table->date('tanggal_kadaluarsa');
             $table->boolean('status')->default(false);
             $table->timestamps();
-            $table->softDeletes();
 
-            $table->index('type');
+            $table->index('tanggal_kadaluarsa');
         });
     }
 
@@ -29,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pixels');
+        Schema::dropIfExists('kode_vouchers');
     }
 };

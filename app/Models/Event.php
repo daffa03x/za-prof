@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Event extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'events';
     protected $fillable = [
         'name',
+        'slug',
         'mitra',
         'website',
         'deskripsi',
@@ -27,10 +28,26 @@ class Event extends Model
         'image',
     ];
 
-    public $timestamps = true;
+    protected $casts = [
+        'status' => 'boolean',
+        'waktu_mulai' => 'datetime',
+        'waktu_berakhir' => 'datetime',
+        'jumlah_tiket' => 'integer',
+        'harga' => 'integer',
+    ];
 
-    public function transaksi()
+    public function transaksis(): HasMany
     {
-        return $this->HasOne(Transaksi::class, 'id_event');
+        return $this->hasMany(Transaksi::class, 'event_id');
+    }
+
+    public function kodeVouchers(): HasMany
+    {
+        return $this->hasMany(KodeVoucher::class, 'event_id');
+    }
+
+    public function pixels(): HasMany
+    {
+        return $this->hasMany(Pixel::class, 'event_id');
     }
 }

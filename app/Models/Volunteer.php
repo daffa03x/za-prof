@@ -4,18 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Volunteer extends Model
 {
     use HasFactory;
-    protected $table = "volunteers";
 
-    protected $fillable = ['name', 'email', 'telepon'];
+    protected $fillable = [
+        'name',
+        'email',
+        'telepon',
+    ];
 
-    public function transaksis()
+    public function transaksis(): BelongsToMany
     {
-        return $this->belongsToMany(Transaksi::class, 'transaksi_volunteers', 'id_volunteer', 'id_transaksi')
+        return $this->belongsToMany(Transaksi::class, 'transaksi_volunteers', 'volunteer_id', 'transaksi_id')
                     ->withTimestamps();
     }
-
 }

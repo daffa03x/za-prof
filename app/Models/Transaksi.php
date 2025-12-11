@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Transaksi extends Model
 {
     use HasFactory, SoftDeletes;
+
     protected $table = 'transaksis';
+
     protected $fillable = [
-        'id_event',
+        'event_id',
         'invoice',
         'jumlah_tiket',
         'total_pembayaran',
@@ -21,34 +25,40 @@ class Transaksi extends Model
         'status_pembayaran',
         'tanggal_register',
         'tanggal_pembayaran',
-        'id_payment'
+        'payment_id',
+        'voucher_id',
     ];
 
     protected $casts = [
         'tanggal_register' => 'datetime',
+        'tanggal_pembayaran' => 'datetime',
+        'jumlah_tiket' => 'integer',
+        'total_pembayaran' => 'integer',
     ];
 
-    public function getRouteKeyName()
+    public function getRouteKeyName(): string
     {
         return 'invoice';
     }
 
-    public function event()
+    public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class, 'id_event');
-    }
-    
-    public function payment()
-    {
-        return $this->belongsTo(Payment::class, 'id_payment'); 
+        return $this->belongsTo(Event::class, 'event_id');
     }
 
-    public function volunteers()
+    public function payment(): BelongsTo
     {
-        return $this->belongsToMany(Volunteer::class, 'transaksi_volunteers', 'id_transaksi', 'id_volunteer')
+        return $this->belongsTo(Payment::class, 'payment_id');
+    }
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(KodeVoucher::class, 'voucher_id');
+    }
+
+    public function volunteers(): BelongsToMany
+    {
+        return $this->belongsToMany(Volunteer::class, 'transaksi_volunteers', 'transaksi_id', 'volunteer_id')
                     ->withTimestamps();
     }
-
-
-    public $timestamps = true;
 }
