@@ -1,4 +1,4 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
 
@@ -40,11 +40,14 @@
 
                 <div class="py-4 d-flex justify-content-between align-items-center">
                     <div>
-                        <a href="{{ route('event.create') }}" class="btn btn-success me-1">Add</a>
-                        <button type="button" class="btn btn-info me-1 text-white" data-toggle="modal"
-                            data-target="#exportEvent">Export</button>
-                        <button type="button" class="btn btn-warning text-white" data-toggle="modal"
-                            data-target="#filterEvent">Filter</a>
+                        <a href="{{ route('event.create') }}" class="btn btn-success me-1">Tambah</a>
+                        <!-- <button type="button" class="btn btn-info me-1 text-white" data-toggle="modal"
+                                data-target="#exportEvent">Export</button>
+                            <button type="button" class="btn btn-warning text-white me-1" data-toggle="modal"
+                                data-target="#filterEvent">Filter</button> -->
+                        <a href="{{ route('event.trashed') }}" class="btn btn-danger">
+                            Terhapus
+                        </a>
                     </div>
 
                     <form class="d-flex ml-2" method="GET" action="{{ route('event.search') }}">
@@ -55,13 +58,13 @@
                 </div>
 
                 <!-- Modal export campaign -->
-                @include('component.modal.exportEvent')
+                @include('components.modal.exportEvent')
 
                 <!-- Modal filter campaign -->
-                @include('component.modal.filterEvent')
+                @include('components.modal.filterEvent')
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
-                        <thead>
+                        <thead class="table-dark">
                             <tr>
                                 <th>No</th>
                                 <th>Event</th>
@@ -83,7 +86,7 @@
                                     <td>@rupiah($item->harga)</td>
                                     </td>
                                     <td>
-                                        <form action="{{ route('event.update.status', $item->id) }}" method="POST">
+                                        <form action="{{ route('event.update.status', $item->slug) }}" method="POST">
                                             @csrf
                                             @method('PUT')
                                             @if ($item->status == 1)
@@ -99,11 +102,11 @@
                                     <td>{{ $item->jumlah_tiket }}</td>
                                     {{-- <td>20</td> --}}
                                     <td>
-                                        <a href="{{ route('event.show', $item->id) }}"
+                                        <a href="{{ route('event.show', $item->slug) }}"
                                             class="btn btn-sm btn-info m-1 text-white">Lihat</a>
-                                        <a href="{{ route('event.edit', $item->id) }}"
+                                        <a href="{{ route('event.edit', $item->slug) }}"
                                             class="btn btn-sm btn-warning m-1 text-white">Edit</a>
-                                        <form action="{{ route('event.destroy', $item->id) }}" method="POST"
+                                        <form action="{{ route('event.destroy', $item->slug) }}" method="POST"
                                             style="display:inline;" onsubmit="return confirmDelete();">
                                             @csrf
                                             @method('DELETE')

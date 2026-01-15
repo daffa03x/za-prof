@@ -1,7 +1,7 @@
-@extends('component.layout.portal')
+@extends('components.layout.portal')
 
 @section('content')
-    @include('component.layout.header')
+    @include('components.layout.header')
 
     <!-- Facebook Pixel Code -->
     <script>
@@ -85,7 +85,7 @@
                     </div>
                     <div class="col-lg-6 order-1 order-lg-2 hero-img" data-aos="zoom-out">
                         <img src="{{ asset('assets/img/za/home_za.jpg') }}" class="img-fluid animated rounded"
-                            alt="">
+                            alt="Zillenial Action - Sobat Zigi Siap Aksi" width="600" height="400">
                         <p class="text-center mt-2" data-aos="fade-up" data-aos-delay="100">#SOBAT ZIGI! SIAP AKSI!</p>
                     </div>
                 </div>
@@ -113,8 +113,9 @@
                     <div class="col-lg-1">
                     </div>
                     <div class="col-lg-6 d-flex align-items-center" data-aos="zoom-out" data-aos-delay="200">
-                        <img src="{{ asset('assets/img/za/about_us.jpg') }}" class="img-fluid rounded" alt="About Us"
-                            loading="lazy">
+                        <img src="{{ asset('assets/img/za/about_us.jpg') }}" class="img-fluid rounded"
+                            alt="Tentang Zillenial Action - Yayasan Pemuda Indonesia" loading="lazy" width="600"
+                            height="400">
                     </div>
 
                 </div>
@@ -194,10 +195,10 @@
                 <div class="row gy-4">
                     @foreach ($event as $item)
                         <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
-                            <a href="{{ route('view_content', ['id' => $item->id]) }}">
+                            <a href="{{ route('view_content', ['slug' => $item->slug]) }}">
                                 <div class="service-item item-indigo position-relative">
-                                    <img src="{{ asset($item->image) }}" alt="Social trip service image" height="200"
-                                        width="200" class="img-fluid mb-4 rounded" loading="lazy" />
+                                    <x-optimized-image :src="$item->image" :alt="$item->name . ' - Social Trip Event'" class="img-fluid mb-4 rounded"
+                                        width="400" height="300" :use-thumbnail="true" />
                                     <h3 class="text-start">{{ $item->name }}</h3>
                                     <p class="text-start">{{ date('d F Y', strtotime($item->waktu_mulai)) }} Pukul
                                         {{ date('H:i', strtotime($item->waktu_mulai)) }} -
@@ -232,7 +233,8 @@
                     <div class="col-lg-4" data-aos="fade-up" data-aos-delay="100">
                         <div class="card">
                             <img src="{{ asset('assets/img/za/about_us.jpg') }}" class="img-fluid rounded"
-                                alt="mengajar desa ranca cangkuang" loading="lazy">
+                                alt="Mengajar di Desa Ranca Cangkuang - Program Pendidikan" loading="lazy" width="400"
+                                height="300">
                             <h3>Mengajar Desa Ranca Cangkuang</h3>
                             <p> Bermain dan berbagi ceria sambil belajar dengan adik adik dari Desa Rancacangkuang. Bermain
                                 games sederhana yang seru dan menggambar bersama tentang cita-cita adik gemas Desa
@@ -243,7 +245,8 @@
                     <div class="col-lg-4" data-aos="fade-up" data-aos-delay="200">
                         <div class="card">
                             <img src="{{ asset('assets/img/portfolio/portfolio_4.jpg') }}" class="img-fluid rounded"
-                                alt="posyandu" loading="lazy">
+                                alt="Zillenial Impact - Program Posyandu Lansia" loading="lazy" width="400"
+                                height="300">
                             <h3>Zillenial Impact : Program Posyandu Lansia</h3>
                             <p>Merupakan program pemberdayaan masyarakat yang difokuskan pada peningkatan kualitas hidup
                                 lanjut usia melalui pelayanan kesehatan preventif, edukasi gizi, serta penguatan peran
@@ -255,7 +258,8 @@
                     <div class="col-lg-4" data-aos="fade-up" data-aos-delay="300">
                         <div class="card">
                             <img src="{{ asset('assets/img/portfolio/portfolio_3.jpg') }}" class="img-fluid rounded"
-                                alt="Clean up day" loading="lazy">
+                                alt="Clean Up Day - Aksi Bersih Lingkungan Tahura Djuanda" loading="lazy" width="400"
+                                height="300">
                             <h3>Clean Up Day : Dari Kata ke Aksi, Dari Aksi ke Inspirasi</h3>
                             <p>Bermain harta karun bersembunyi sambil jalan santai dan membersihkan lingkungan sekitar Tamah
                                 Hutan Raya Ir Djuanda bersama adik panti. Tidak hanya itu, keseruan bertambah saat peserta
@@ -266,7 +270,8 @@
                     <div class="col-lg-4" data-aos="fade-up" data-aos-delay="400">
                         <div class="card">
                             <img src="{{ asset('assets/img/portfolio/portfolio_2.jpg') }}" class="img-fluid rounded"
-                                alt="idul fitri" loading="lazy">
+                                alt="Harmoni Berbagi - Belanja Bersama Adik Panti Idul Fitri" loading="lazy"
+                                width="400" height="300">
                             <h3>Harmoni Berbagi : Belanja Bersama Adik Panti di Eid Al-Fitr</h3>
                             <p>Indahnya berbagi bersama adik panti di indahnya lebaran yang Fitri. Tidak hanya berbagi baju
                                 baru, tertapi juga berbagi kebahagiaan dan kehangatan. Senyum manis mereka menambah warna di
@@ -302,7 +307,9 @@
                                 sebagai agen perubahan yang berdampak positif bagi masyarakat dan lingkungan.
                             </p>
                             <div class="d-flex justify-content-center">
-                                <img src="{{ asset('assets/img/sostrip.png') }}" alt="" class="img-fluid mt-4">
+                                <img src="{{ asset('assets/img/sostrip.png') }}"
+                                    alt="Program Social Trip Zillenial Action" class="img-fluid mt-4" loading="lazy"
+                                    width="300" height="300">
                             </div>
                         </div>
                     </div>
@@ -318,8 +325,9 @@
                                 Pembangunan Berkelanjutan (SDGs).
                             </p>
                             <div class="d-flex justify-content-center">
-                                <img src="{{ asset('assets/img/zillenial_impact.png') }}" alt=""
-                                    class="img-fluid">
+                                <img src="{{ asset('assets/img/zillenial_impact.png') }}"
+                                    alt="Program Zillenial Impact - Pemberdayaan Berkelanjutan" class="img-fluid"
+                                    loading="lazy" width="300" height="300">
                             </div>
                         </div>
                     </div>
@@ -557,8 +565,9 @@
                                     Seru banget ketemu temen baru dan adik-adik yang lucu. Kegiatannya keren!
                                 </p>
                                 <div class="profile mt-auto">
-                                    <img src="assets/img/testimonials/testimonials-1.jpg" class="testimonial-img"
-                                        alt="">
+                                    <img src="{{ asset('assets/img/testimonials/testimonials-1.jpg') }}"
+                                        class="testimonial-img" alt="Foto Nayla Nur Adzima - Volunteer" loading="lazy"
+                                        width="80" height="80">
                                     <h3>Nayla Nur Adzima</h3>
                                     <h4>Volunteer</h4>
                                 </div>
@@ -577,8 +586,9 @@
                                     Trims Zillenial Action!
                                 </p>
                                 <div class="profile mt-auto">
-                                    <img src="assets/img/testimonials/testimonials-2.jpg" class="testimonial-img"
-                                        alt="">
+                                    <img src="{{ asset('assets/img/testimonials/testimonials-2.jpg') }}"
+                                        class="testimonial-img" alt="Foto Elsa Arinda - Volunteer" loading="lazy"
+                                        width="80" height="80">
                                     <h3>Elsa Arinda</h3>
                                     <h4>Volunteer</h4>
                                 </div>
@@ -597,8 +607,9 @@
                                     ragam banget!!
                                 </p>
                                 <div class="profile mt-auto">
-                                    <img src="assets/img/testimonials/testimonials-3.jpg" class="testimonial-img"
-                                        alt="">
+                                    <img src="{{ asset('assets/img/testimonials/testimonials-3.jpg') }}"
+                                        class="testimonial-img" alt="Foto Agniya Aulia - Volunteer" loading="lazy"
+                                        width="80" height="80">
                                     <h3>Agniya Aulia</h3>
                                     <h4>Volunteer</h4>
                                 </div>
@@ -617,8 +628,9 @@
                                     Rekomended banget buat kalian yang mau isi waktu dengan hal positif!
                                 </p>
                                 <div class="profile mt-auto">
-                                    <img src="assets/img/testimonials/testimonials-4.jpg" class="testimonial-img"
-                                        alt="">
+                                    <img src="{{ asset('assets/img/testimonials/testimonials-4.jpg') }}"
+                                        class="testimonial-img" alt="Foto Nabila Virla A - Volunteer" loading="lazy"
+                                        width="80" height="80">
                                     <h3>Nabila Virla A.</h3>
                                     <h4>Volunteer</h4>
                                 </div>
@@ -637,8 +649,9 @@
                                     volunteer bareng ZA!
                                 </p>
                                 <div class="profile mt-auto">
-                                    <img src="assets/img/testimonials/testimonials-5.jpg" class="testimonial-img"
-                                        alt="">
+                                    <img src="{{ asset('assets/img/testimonials/testimonials-5.jpg') }}"
+                                        class="testimonial-img" alt="Foto Aldira Aprilia - Volunteer" loading="lazy"
+                                        width="80" height="80">
                                     <h3>Aldira Aprilia</h3>
                                     <h4>Volunteer</h4>
                                 </div>
@@ -739,5 +752,5 @@
         </section><!-- /Clients Section -->
     </main>
 
-    @include('component.layout.footer')
+    @include('components.layout.footer')
 @endsection

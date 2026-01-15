@@ -1,79 +1,54 @@
-<!-- resources/views/companies/create.blade.php -->
-
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
     <div class="container mt-4">
-
         <div class="row justify-content-center">
-            <div class="col-md-8">
-                <!-- Menampilkan Notifikasi Sukses -->
-                @if (session('success'))
-                    <div class="alert alert-success">
-                        {{ session('success') }}
+            <div class="col-md-8 col-lg-6">
+
+                {{-- Alerts --}}
+                <x-form-alerts />
+
+                {{-- Header --}}
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Edit Payment
+                    </h4>
+                    <a href="{{ route('payment.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Kembali
+                    </a>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fas fa-edit me-2"></i>Form Edit Payment
                     </div>
-                @endif
-
-                <!-- Menampilkan Notifikasi Error -->
-                @if (session('error'))
-                    <div class="alert alert-danger">
-                        {{ session('error') }}
-                    </div>
-                @endif
-
-                <!-- Menampilkan Pesan Validasi Error -->
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <div class="card">
-                    <div class="card-header">{{ $title }}</div>
-
-                    <div class="card-body">
-                        <form action="{{ route('payment.update', $data->id) }}" method="POST" enctype="multipart/form-data">
+                    <div class="card-body p-4">
+                        <form method="POST" action="{{ route('payment.update', $payment->id) }}"
+                            enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
 
-                            <div class="form-group">
-                                <label for="image">Image</label>
-                                @if ($data->image)
-                                    <div>
-                                        <img src="{{ asset('storage/' . $data->image) }}" alt="Company Image"
-                                            style="width: 100px;">
-                                    </div>
-                                @endif
-                                <input type="file" class="form-control @error('image') is-invalid @enderror"
-                                    id="image" name="image">
-                                @error('image')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            {{-- Image Upload --}}
+                            <x-form-file name="image" label="Logo Payment"
+                                hint="Upload logo bank/e-wallet (PNG/JPG, max 1MB)" :current-image="$payment->image" />
 
-                            <div class="form-group">
-                                <label for="name">Name</label>
-                                <input type="text" class="form-control @error('name') is-invalid @enderror"
-                                    id="name" name="name" value="{{ old('name', $data->name) }}" required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            {{-- Payment Name --}}
+                            <x-form-input name="name" label="Nama Payment" placeholder="Contoh: BCA, Mandiri, GoPay"
+                                :value="$payment->name" :required="true" />
+
+                            {{-- Account Number --}}
+                            <x-form-input name="no_rek" label="Nomor Rekening" placeholder="Masukkan nomor rekening/akun"
+                                :value="$payment->no_rek" :required="true" />
+
+                            {{-- Submit --}}
+                            <div class="d-flex gap-2 pt-3 border-top">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save me-1"></i>Update Payment
+                                </button>
+                                <a href="{{ route('payment.index') }}" class="btn btn-outline-secondary">
+                                    Batal
+                                </a>
                             </div>
-                            <div class="form-group">
-                                <label for="nor_rek">Rekening</label>
-                                <input type="text" class="form-control @error('nor_rek') is-invalid @enderror"
-                                    name="nor_rek" value="{{ old('name', $data->no_rek) }}" required>
-                                @error('nor_rek')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                            <button type="submit" class="btn btn-primary mt-4">Update</button>
                         </form>
                     </div>
                 </div>

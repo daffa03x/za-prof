@@ -1,4 +1,4 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
     <div class="container mt-4">
@@ -41,41 +41,41 @@
 
                     <div class="card-body">
                         <center>
-                            <img src="{{ asset($data->image) }}" class="card-img-top" alt="{{ $data->id }}"
+                            <img src="{{ asset($event->image) }}" class="card-img-top" alt="{{ $event->id }}"
                                 style="width: 200px;">
                         </center>
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
-                                <h5 class="card-title">{{ $data->name }}</h5>
+                                <h5 class="card-title">{{ $event->name }}</h5>
                             </li>
                             <li class="list-group-item">
-                                Mitra : {{ $data->mitra }}
+                                Mitra : {{ $event->mitra }}
                             </li>
                             {{-- <li class="list-group-item">
-                                Link : {{ $data->website }}
+                                Link : {{ $event->website }}
                             </li> --}}
                             <li class="list-group-item">
-                                Jumlah Tiket : {{ $data->jumlah_tiket }}
+                                Jumlah Tiket : {{ $event->jumlah_tiket }}
                             </li>
                             <li class="list-group-item">
-                                Harga Tiket : @rupiah($data->harga)
+                                Harga Tiket : @rupiah($event->harga)
                             </li>
                             <li class="list-group-item">
-                                @if ($data->status == 0)
-                                    <span class="badge badge-success">Status : Aktif</span>
+                                @if ($event->status == 0)
+                                    Status : <span class="badge bg-success"> Aktif</span>
                                 @else
-                                    <span class="badge badge-danger">Status : Tidak Aktif</span>
+                                    Status : <span class="badge bg-danger"> Tidak Aktif</span>
                                 @endif
                             </li>
                             <li class="list-group-item">
-                                Tanggal Mulai <strong>{{ $data->waktu_mulai }}</strong> - Tanggal Berakhir
-                                <strong>{{ $data->waktu_berakhir }}</strong>
+                                Tanggal Mulai <strong>{{ $event->waktu_mulai }}</strong> - Tanggal Berakhir
+                                <strong>{{ $event->waktu_berakhir }}</strong>
                             </li>
                             <li class="list-group-item">
-                                Lokasi : {{ $data->nama_tempat }} | {{ $data->kota }} || {{ $data->alamat }}
+                                Lokasi : {{ $event->nama_tempat }} | {{ $event->kota }} || {{ $event->alamat }}
                             </li>
                             <li class="list-group-item">
-                                {!! $data->deskripsi !!}
+                                {!! $event->deskripsi !!}
                             </li>
                         </ul>
                         {{-- <div class="card-body">

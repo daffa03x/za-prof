@@ -1,78 +1,52 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
     <div class="container mt-4">
-
         <div class="row justify-content-center">
-            <div class="col-md-8">
-                <!-- Menampilkan Notifikasi Sukses -->
-                @if (session('success'))
-                    <div class="alert alert-success">
-                        {{ session('success') }}
-                    </div>
-                @endif
+            <div class="col-md-8 col-lg-6">
 
-                <!-- Menampilkan Notifikasi Error -->
-                @if (session('error'))
-                    <div class="alert alert-danger">
-                        {{ session('error') }}
-                    </div>
-                @endif
+                {{-- Alerts --}}
+                <x-form-alerts />
 
-                <!-- Menampilkan Pesan Validasi Error -->
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <div class="py-4 d-flex justify-content-between align-items-center">
-                    <div>
-                        <a href="{{ route('payment.index') }}" class="btn btn-secondary">Kembali</a>
-                    </div>
+                {{-- Header --}}
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">
+                        <i class="fas fa-credit-card me-2"></i>Tambah Payment
+                    </h4>
+                    <a href="{{ route('payment.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Kembali
+                    </a>
                 </div>
 
-                <div class="card">
-                    <div class="card-header">Buat Payment</div>
-
-                    <div class="card-body">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-edit me-2"></i>Form Payment
+                    </div>
+                    <div class="card-body p-4">
                         <form method="POST" action="{{ route('payment.store') }}" enctype="multipart/form-data">
                             @csrf
-                            <div class="form-group">
-                                <label for="image">Image file input</label>
-                                <input type="file" class="form-control @error('image') is-invalid @enderror"
-                                    id="image" name="image">
-                                @error('image')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
+
+                            {{-- Image Upload --}}
+                            <x-form-file name="image" label="Logo Payment"
+                                hint="Upload logo bank/e-wallet (PNG/JPG, max 1MB)" :required="true" />
+
+                            {{-- Payment Name --}}
+                            <x-form-input name="name" label="Nama Payment" placeholder="Contoh: BCA, Mandiri, GoPay"
+                                :required="true" />
+
+                            {{-- Account Number --}}
+                            <x-form-input name="no_rek" label="Nomor Rekening" placeholder="Masukkan nomor rekening/akun"
+                                :required="true" />
+
+                            {{-- Submit --}}
+                            <div class="d-flex gap-2 pt-3 border-top">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Simpan Payment
+                                </button>
+                                <a href="{{ route('payment.index') }}" class="btn btn-outline-secondary">
+                                    Batal
+                                </a>
                             </div>
-                            <div class="form-group">
-                                <label for="name">Name</label>
-                                <input type="text" class="form-control @error('name') is-invalid @enderror"
-                                    name="name" required>
-                                @error('name')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                            <div class="form-group">
-                                <label for="no_rek">Rekening</label>
-                                <input type="text" class="form-control @error('no_rek') is-invalid @enderror"
-                                    name="no_rek" required>
-                                @error('no_rek')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                            <button type="submit" class="btn btn-primary">Simpan</button>
                         </form>
                     </div>
                 </div>
