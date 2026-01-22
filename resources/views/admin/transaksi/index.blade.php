@@ -1,4 +1,4 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 <style>
     th,
     td {
@@ -38,10 +38,13 @@
                 <div class="py-4 d-flex justify-content-between align-items-center">
                     <div>
                         {{-- <a href="{{ route('transaksi.create') }}" class="btn btn-success">Add</a> --}}
-                        <button type="button" class="btn btn-info" data-toggle="modal"
-                            data-target="#exportTransaksi">Export</button>
-                        <button type="button" class="btn btn-warning" data-toggle="modal"
-                            data-target="#filterTransaksi">Filter</a>
+                        <!-- <button type="button" class="btn btn-info me-1 text-white" data-toggle="modal"
+                                            data-target="#exportTransaksi">Export</button>
+                                        <button type="button" class="btn btn-warning me-1 text-white" data-toggle="modal"
+                                            data-target="#filterTransaksi">Filter</button> -->
+                        <a href="{{ route('transaksi.trashed') }}" class="btn btn-danger">
+                            Terhapus
+                        </a>
                     </div>
 
                     <form class="d-flex ml-2" method="GET" action="{{ route('transaksi.search') }}">
@@ -52,14 +55,14 @@
                 </div>
 
                 <!-- Modal export campaign -->
-                @include('component.modal.exportTransaksi')
+                @include('components.modal.exportTransaksi')
 
                 <!-- Modal filter campaign -->
-                @include('component.modal.filterTransaksi')
+                @include('components.modal.filterTransaksi')
 
                 <div class="table-responsive">
-                    <table class="table">
-                        <thead>
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
                             <tr>
                                 <th>No</th>
                                 {{-- <th>Id</th> --}}
@@ -84,7 +87,7 @@
                                     <td>{{ $loop->iteration }}</td>
                                     {{-- <td>{{ $item->id }}</td> --}}
                                     <td>{{ $item->invoice }}</td>
-                                    <td>{{ $item->name_event }}</td>
+                                    <td>{{ $item->event->name }}</td>
                                     <td>{{ $item->name }}</td>
                                     <td>{{ $item->email }}</td>
                                     <td>{{ $item->telepon }}</td>
@@ -112,14 +115,14 @@
                                         @endif
                                     </td>
 
-                                    <td>
+                                    <td id="tanggal-bayar-{{ $item->id }}">
                                         @if ($item->tanggal_pembayaran === null)
                                             Belum Bayar
                                         @else
                                             {{ $item->tanggal_pembayaran }}
                                         @endif
                                     </td>
-                                    <td>{{ $item->name_payment }}</td>
+                                    <td>{{ $item->payment->name }}</td>
                                     <td>
                                         <a href="{{ route('transaksi.show', $item->invoice) }}"
                                             class="btn btn-sm btn-info m-1 text-white">Lihat</a>
@@ -153,6 +156,18 @@
                 return;
             }
 
+            // Get the status element and button
+            const statusElement = document.querySelector(`#status-${id}`);
+            const originalButton = statusElement.querySelector('button');
+
+            // Store original button content and show loading
+            const originalContent = originalButton.innerHTML;
+            const originalClass = originalButton.className;
+            originalButton.innerHTML =
+                `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+            originalButton.disabled = true;
+            originalButton.className = 'btn btn-sm btn-secondary m-1';
+
             try {
                 // Kirim permintaan untuk memperbarui status transaksi
                 const response = await fetch('/transaksi/update', {
@@ -169,17 +184,31 @@
                 const result = await response.json();
                 console.info('Response:', result);
 
-                // Menentukan elemen tombol berdasarkan ID
-                const statusElement = document.querySelector(`#status-${id}`);
-
-                // Mengupdate status tombol menjadi "Y" setelah update
-                if (statusElement && result.message === 'Status berhasil diperbarui!') {
+                // Check if response was successful (status 200)
+                if (response.ok) {
+                    // Update status button to "Y" after successful update
                     statusElement.innerHTML = `<button class="btn btn-sm btn-success m-1">Y</button>`;
-                }
 
-                alert(result.message);
+                    // Update payment date
+                    const tanggalBayarElement = document.querySelector(`#tanggal-bayar-${id}`);
+                    if (tanggalBayarElement && result.tanggal_pembayaran) {
+                        tanggalBayarElement.textContent = result.tanggal_pembayaran;
+                    }
+
+                    alert(result.message);
+                } else {
+                    // Restore original button on error
+                    originalButton.innerHTML = originalContent;
+                    originalButton.className = originalClass;
+                    originalButton.disabled = false;
+                    alert(result.message || 'Gagal memperbarui status.');
+                }
             } catch (error) {
                 console.error('Error:', error);
+                // Restore original button on error
+                originalButton.innerHTML = originalContent;
+                originalButton.className = originalClass;
+                originalButton.disabled = false;
                 alert('Terjadi kesalahan. Silakan coba lagi.');
             }
         }

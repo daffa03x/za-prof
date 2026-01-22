@@ -22,9 +22,10 @@ class UpdatePixelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|max:100',
-            'type' => 'required|max:100',
-            'id_event' => 'required|max:100',
+            'name' => 'required|string|max:100',
+            'type' => 'required|string|max:100',
+            'pixel_code' => 'required|string|max:100',
+            'id_event' => 'required|exists:events,id',
         ];
     }
 }

@@ -1,7 +1,7 @@
-@extends('component.layout.portal')
+@extends('components.layout.portal')
 
 @section('content')
-    @include('component.layout.header')
+    @include('components.layout.header')
 
     <!-- Facebook Pixel Code -->
     <script>
@@ -100,7 +100,7 @@
                                 class="img-fluid mb-4" />
                             <h3>{{ $item->name }}</h3>
                             <p>{{ $item->deskripsi }}</p>
-                            <a href="{{ route('view_content', ['id' => $item->id]) }}" class="read-more stretched-link">
+                            <a href="{{ route('view_content', ['slug' => $item->slug]) }}" class="read-more stretched-link">
                                 <span>Lihat</span>
                                 <i class="bi bi-arrow-right"></i>
                             </a>
@@ -110,7 +110,7 @@
                 <div class="row gy-4" id="program-list">
                     @foreach ($event as $item)
                         <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
-                            <a href="{{ route('view_content', ['id' => $item->id]) }}">
+                            <a href="{{ route('view_content', ['slug' => $item->slug]) }}">
                                 <div class="service-item item-indigo position-relative">
                                     <img src="{{ asset($item->image) }}" alt="Social trip service image" height="200"
                                         width="200" class="img-fluid mb-4 rounded" loading="lazy" />
@@ -134,5 +134,5 @@
 
     </main>
 
-    @include('component.layout.footer')
+    @include('components.layout.footer')
 @endsection
