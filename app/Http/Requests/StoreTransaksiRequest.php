@@ -22,12 +22,12 @@ class StoreTransaksiRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id_event' => 'required|max:50',
-            'jumlah_tiket' => 'required|min:1|max:50',
+            'id_event' => 'required|exists:events,id',
+            'jumlah_tiket' => 'required|integer|min:1|max:50',
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100',
-            'telepon' => 'required|numeric',
-            'id_payment' => 'required|string'
+            'telepon' => 'required|string|max:20',
+            'id_payment' => 'required|exists:payments,id'
         ];
         
     }

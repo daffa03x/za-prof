@@ -13,22 +13,24 @@ return new class extends Migration
     {
         Schema::create('transaksis', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_event');
-            $table->foreign('id_event')->references('id')->on('events');
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
             $table->string('invoice');
-            $table->integer('jumlah_tiket');
-            $table->string('total_pembayaran', 15);
+            $table->unsignedInteger('jumlah_tiket');
+            $table->unsignedBigInteger('total_pembayaran');
             $table->string('name');
             $table->string('email');
             $table->string('telepon');
             $table->enum('status_pembayaran', ['Success', 'Failed', 'Pending']);
             $table->dateTime('tanggal_register');
             $table->dateTime('tanggal_pembayaran')->nullable();
-            $table->unsignedBigInteger('id_payment');
-            $table->foreign('id_payment')->references('id')->on('payments');
+            $table->foreignId('payment_id')->constrained('payments')->onDelete('cascade');
+            $table->foreignId('voucher_id')->nullable()->constrained('kode_vouchers')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
-            
+
+            $table->index('invoice');
+            $table->index('email');
+            $table->index('status_pembayaran');
         });
     }
 

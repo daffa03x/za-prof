@@ -15,10 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('type');
-            $table->integer('id_event');
-            $table->boolean('status')->default(0);
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+            $table->boolean('status')->default(false);
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index('type');
         });
     }
 

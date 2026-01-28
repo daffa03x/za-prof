@@ -6,176 +6,328 @@ use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Transaksi;
 use App\Models\Volunteer;
+use App\Models\KodeVoucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
+/**
+ * Class PortalController
+ *
+ * Handles public-facing portal pages for events, checkout, and tickets.
+ */
 class PortalController extends Controller
 {
-    public function event_search(Request $request)
+    /**
+     * Search events for portal.
+     */
+    public function eventSearch(Request $request): View
     {
-        $search = $request->search;
-        // Mulai query
-        $query = Event::whereNull('deleted_at')
-                        ->orderBy('created_at', 'desc');
-        // Jika ada pencarian, terapkan filter
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                ->orWhere('mitra', 'like', '%' . $search . '%');
-            });
-        }
-        // Ambil data dengan paginasi
-        $event = $query->paginate(12);
+        $event = Event::query()
+            ->orderByDesc('created_at')
+            ->when($request->search, fn($q) => 
+                $q->where(fn($query) => 
+                    $query->where('name', 'like', '%' . $request->search . '%')
+                          ->orWhere('mitra', 'like', '%' . $request->search . '%')
+                )
+            )
+            ->paginate(12);
 
         return view('portal.program', compact('event'));
     }
 
-    public function index(Request $request)
+    /**
+     * Display portal homepage.
+     */
+    public function index(): View
     {
-        $event = Event::orderByDesc('id')->limit(6)->get();
+        // Cache homepage events for 10 minutes
+        $event = Cache::remember('homepage_events', 600, function () {
+            return Event::query()
+                ->select(['id', 'name', 'slug', 'image', 'harga', 'waktu_mulai', 'kota', 'mitra'])
+                ->where('status', true)
+                ->orderByDesc('id')
+                ->limit(6)
+                ->get();
+        });
 
         return view('portal.index', compact('event'));
     }
 
-    public function view_content(Request $request, $id)
+    /**
+     * View event content.
+     */
+    public function viewContent(string $slug): View
     {
-        $data = Event::where('id', $id)->first();
+        $data = Event::where('slug', $slug)->firstOrFail();
 
         return view('portal.view_content', compact('data'));
     }
 
-    public function checkout(Request $request, $id)
+    /**
+     * Checkout page.
+     */
+    public function checkout(string $slug): View
     {
-        $data = Event::where('id', $id)->first();
-        $payment = Payment::get();
+        $data = Event::where('slug', $slug)->firstOrFail();
+        
+        // Cache payment methods for 30 minutes (rarely changes)
+        $payment = Cache::remember('active_payment_methods', 1800, function () {
+            return Payment::select(['id', 'name', 'image', 'no_rek'])
+                ->where('status', true)
+                ->orderBy('id')
+                ->get();
+        });
 
         return view('portal.checkout', compact('data', 'payment'));
     }
 
-    public function transaksiPost(Request $request, $id)
+    /**
+     * Process transaction.
+     */
+    public function transaksiPost(Request $request, string $slug): RedirectResponse
     {
-        // ... sebelum try ...
-        DB::beginTransaction();
-
         $request->validate([
             'jumlah_tiket' => 'required|integer|min:1',
-            'payment' => 'required',
-            'pengunjung' => 'required|array',
-            'pengunjung.*.name' => 'required|string',
-            'pengunjung.*.telepon' => 'required|string',
-            'pengunjung.*.email' => 'required|email',
+            'payment' => 'required|exists:payments,id',
+            'pengunjung' => 'required|array|min:1',
+            'pengunjung.*.name' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'pengunjung.*.telepon' => ['required', 'string', 'min:9', 'max:13', 'regex:/^[0-9]+$/'],
+            'pengunjung.*.email' => ['required', 'email:rfc,dns', 'max:255'],
+            'voucher_code' => 'nullable|string',
+        ], [
+            'pengunjung.*.name.required' => 'Nama wajib diisi',
+            'pengunjung.*.name.min' => 'Nama minimal 3 karakter',
+            'pengunjung.*.name.regex' => 'Nama hanya boleh berisi huruf dan spasi',
+            'pengunjung.*.telepon.required' => 'Nomor ponsel wajib diisi',
+            'pengunjung.*.telepon.min' => 'Nomor ponsel minimal 9 digit',
+            'pengunjung.*.telepon.max' => 'Nomor ponsel maksimal 13 digit',
+            'pengunjung.*.telepon.regex' => 'Nomor ponsel hanya boleh berisi angka',
+            'pengunjung.*.email.required' => 'Email wajib diisi',
+            'pengunjung.*.email.email' => 'Format email tidak valid',
         ]);
 
+        DB::beginTransaction();
+
         try {
-            $affectedRows = Event::where('id', $id)
-                                ->where('jumlah_tiket', '>=', $request->jumlah_tiket)
-                                ->decrement('jumlah_tiket', $request->jumlah_tiket);
+            $event = Event::where('slug', $slug)->firstOrFail();
+
+            $affectedRows = Event::where('id', $event->id)
+                ->where('jumlah_tiket', '>=', $request->jumlah_tiket)
+                ->decrement('jumlah_tiket', $request->jumlah_tiket);
 
             if ($affectedRows === 0) {
-                // Ini berarti tiket tidak cukup atau event tidak ditemukan
                 throw new \Exception("Tiket tidak mencukupi atau event tidak valid.");
             }
 
-            $event = Event::find($id); // Ambil data event yang sudah terupdate
-            if (!$event) { // Tambahkan pengecekan jika event tidak ditemukan setelah decrement
-                throw new \Exception("Event tidak ditemukan setelah decrement.");
+            $invoice = date('YmdHis') . uniqid();
+            
+            // Handle voucher if provided
+            $voucherId = null;
+            if ($request->voucher_code) {
+                $voucher = KodeVoucher::where('kode', $request->voucher_code)
+                    ->where('id_event', $event->id)
+                    ->where('status', true)
+                    ->where('tanggal_kadaluarsa', '>=', now()->startOfDay())
+                    ->first();
+                
+                if ($voucher) {
+                    // Calculate remaining quota
+                    $remainingQuota = $voucher->kuota - $voucher->digunakan;
+                    
+                    // Check if voucher has enough quota for all tickets
+                    if ($remainingQuota < $request->jumlah_tiket) {
+                        throw new \Exception("Kuota voucher tidak mencukupi. Tersisa {$remainingQuota} kuota, dibutuhkan {$request->jumlah_tiket}.");
+                    }
+                    
+                    $voucherId = $voucher->id;
+                    // Increment voucher usage by ticket count
+                    $voucher->increment('digunakan', $request->jumlah_tiket);
+                }
             }
 
-            // Buat nomor invoice
-            $invoice = date('YmdHis') . uniqid();
+            // Helper function to format phone number with +62 prefix
+            $formatPhone = function($phone) {
+                $phone = preg_replace('/[^0-9]/', '', $phone); // Remove non-digits
+                if (str_starts_with($phone, '0')) {
+                    $phone = substr($phone, 1); // Remove leading 0
+                }
+                if (!str_starts_with($phone, '62')) {
+                    $phone = '62' . $phone;
+                }
+                return '+' . $phone;
+            };
 
-            $query = [
-                'id_event' => $id,
+            $transaksi = Transaksi::create([
+                'id_event' => $event->id,
                 'invoice' => $invoice,
                 'jumlah_tiket' => $request->jumlah_tiket,
                 'total_pembayaran' => $request->price,
                 'name' => $request->pengunjung[0]['name'],
-                'telepon' => $request->pengunjung[0]['telepon'],
+                'telepon' => $formatPhone($request->pengunjung[0]['telepon']),
                 'email' => $request->pengunjung[0]['email'],
                 'status_pembayaran' => 'Pending',
                 'tanggal_register' => now(),
                 'tanggal_pembayaran' => null,
                 'id_payment' => $request->payment,
-            ];
+                'id_voucher' => $voucherId,
+            ]);
 
-            $transaksi = Transaksi::create($query);
-
-            // Loop untuk setiap pengunjung dan simpan ke pivot table
+            // Process volunteers
             foreach ($request->pengunjung as $pengunjungData) {
-                // Cek apakah volunteer dengan email ini sudah ada
-                $volunteer = Volunteer::where('email', $pengunjungData['email'])->first();
-
-                if (!$volunteer) {
-                    // Jika belum ada, buat baru
-                    $volunteer = Volunteer::create([
+                $volunteer = Volunteer::firstOrCreate(
+                    ['email' => $pengunjungData['email']],
+                    [
                         'name' => $pengunjungData['name'],
-                        'telepon' => $pengunjungData['telepon'],
-                        'email' => $pengunjungData['email'],
-                    ]);
-                }
+                        'telepon' => $formatPhone($pengunjungData['telepon']),
+                    ]
+                );
 
-                // Hubungkan ke transaksi (gunakan attach untuk hindari duplikat insert manual)
                 $transaksi->volunteers()->syncWithoutDetaching([$volunteer->id]);
             }
 
             DB::commit();
-            return redirect("/invoice/$transaksi->invoice")->with('success', 'Success');
+
+            Log::info('Transaction created via portal', [
+                'invoice' => $transaksi->invoice,
+                'event_id' => $event->id,
+                'event_name' => $event->name,
+                'total' => $request->price,
+                'ticket_count' => $request->jumlah_tiket,
+                'voucher_applied' => $voucherId !== null,
+                'ip' => $request->ip(),
+            ]);
+
+            return redirect("/invoice/{$transaksi->invoice}")->with('success', 'Transaksi berhasil');
 
         } catch (\Exception $e) {
             DB::rollback();
-            return dd($e->getMessage());
+            
+            Log::error('Transaction failed via portal', [
+                'event_slug' => $slug,
+                'error' => $e->getMessage(),
+                'ip' => $request->ip(),
+            ]);
+            
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
-    public function invoice($invoice) 
+    /**
+     * Display invoice.
+     */
+    public function invoice(string $invoice): View
     {
-        try {
-            $data = Transaksi::with('event','payment','volunteers')->where('invoice',$invoice)->first();
-            if($data == null){
-                return view('portal.error_tiket');
-            }else{
-                // Ambil tanggal pembuatan data
-                $tanggalDibuat = Carbon::parse($data->tanggal_register); // Pastikan ini mengakses kolom created_at yang benar
+        $data = Transaksi::with(['event', 'payment', 'volunteers'])
+            ->where('invoice', $invoice)
+            ->first();
 
-                // Hitung tanggal 1 hari dari hari ini
-                $batasWaktu = Carbon::now()->subDays(1); // Ini akan menjadi "kemarin"
-
-                // Periksa apakah waktu pembuatan lebih dari 1 hari yang lalu (yaitu, sebelum kemarin)
-                if ($tanggalDibuat->lessThan($batasWaktu)) {
-                    // Jika sudah lebih dari 1 hari, arahkan ke view lain (misalnya halaman kadaluarsa)
-                    // return view('portal.invoice_kadaluarsa');
-                    return view('portal.error_tiket');
-                } else {
-                    // Jika belum kadaluarsa, tampilkan view invoice biasa
-                    return view('portal.invoice', compact('data'));
-                }
-            }
-        } catch (\Exception $e) {
-            return redirect()->route('portal.checkout', ['invoice' => $invoice])->with('error', 'Failed');
+        if (!$data) {
+            return view('portal.error_tiket');
         }
+
+        $tanggalDibuat = Carbon::parse($data->tanggal_register);
+        $batasWaktu = Carbon::now()->subDays(1);
+
+        if ($tanggalDibuat->lessThan($batasWaktu)) {
+            return view('portal.error_tiket');
+        }
+
+        return view('portal.invoice', compact('data'));
     }
 
-    public function program(Request $request)
+    /**
+     * Display program list.
+     */
+    public function program(): View
     {
-        $event = Event::whereNull('deleted_at')
-                ->orderBy('created_at', 'desc')
-                ->paginate(9);
-        
+        $event = Event::query()
+            ->orderByDesc('created_at')
+            ->paginate(9);
+
         return view('portal.program', compact('event'));
     }
 
-    public function tiket($invoice)
+    /**
+     * Display ticket.
+     */
+    public function tiket(string $invoice): View
     {
-        try {
-            $transaksi = Transaksi::with("event", "volunteers")->where('invoice',$invoice)->where('status_pembayaran',"Success")->first();
-            if($transaksi){
-                return view('portal.tiket', compact('transaksi'));
-            }else{
-                return view('portal.error_tiket');
-            }
-        } catch (\Exception $e) {
-            return redirect('portal.error-tiket')->with('error', 'Failed');
+        $transaksi = Transaksi::with(['event', 'volunteers'])
+            ->where('invoice', $invoice)
+            ->where('status_pembayaran', 'Success')
+            ->first();
+
+        if (!$transaksi) {
+            return view('portal.error_tiket');
         }
+
+        return view('portal.tiket', compact('transaksi'));
+    }
+
+    /**
+     * Validate voucher code via API.
+     */
+    public function validateVoucher(Request $request): JsonResponse
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'event_id' => 'required|integer|exists:events,id',
+        ]);
+
+        $voucher = KodeVoucher::where('kode', $request->code)
+            ->where('id_event', $request->event_id)
+            ->where('status', true)
+            ->first();
+
+        if (!$voucher) {
+            Log::warning('Invalid voucher code attempted', [
+                'code' => $request->code,
+                'event_id' => $request->event_id,
+                'ip' => $request->ip(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode voucher tidak valid atau tidak berlaku untuk event ini.'
+            ], 400);
+        }
+
+        // Check if voucher is expired
+        if ($voucher->tanggal_kadaluarsa < now()->startOfDay()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode voucher sudah kadaluarsa.'
+            ], 400);
+        }
+
+        // Check if voucher has remaining quota
+        if ($voucher->digunakan >= $voucher->kuota) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kuota voucher sudah habis.'
+            ], 400);
+        }
+
+        Log::info('Voucher validated successfully', [
+            'voucher_id' => $voucher->id,
+            'voucher_code' => $voucher->kode,
+            'event_id' => $request->event_id,
+            'discount_per_ticket' => $voucher->nilai_diskon,
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Voucher '{$voucher->name_voucher}' berhasil diterapkan! Diskon Rp " . number_format($voucher->nilai_diskon, 0, ',', '.') . " per tiket",
+            'discount_per_ticket' => $voucher->nilai_diskon,
+            'voucher_id' => $voucher->id,
+            'voucher_name' => $voucher->name_voucher
+        ]);
     }
 }

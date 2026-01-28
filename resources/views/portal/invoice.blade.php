@@ -1,4 +1,4 @@
-@extends('component.layout.portal')
+@extends('components.layout.portal')
 
 
 @section('content')
@@ -318,7 +318,7 @@
         </section><!-- /Portfolio Details Section -->
 
     </main>
-    @include('component.layout.footer')
+    @include('components.layout.footer')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

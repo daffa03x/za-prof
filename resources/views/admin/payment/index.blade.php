@@ -1,4 +1,4 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
     <div class="container mt-4">
@@ -32,7 +32,10 @@
 
                 <div class="py-4 d-flex justify-content-between align-items-center">
                     <div>
-                        <a href="{{ route('payment.create') }}" class="btn btn-success">Add</a>
+                        <a href="{{ route('payment.create') }}" class="btn btn-success me-1">Tambah</a>
+                        <a href="{{ route('payment.trashed') }}" class="btn btn-danger">
+                            Terhapus
+                        </a>
                     </div>
 
                     <form class="d-flex ml-2" method="GET" action="{{ route('payment.search') }}">
@@ -42,48 +45,50 @@
                     </form>
                 </div>
 
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Image</th>
-                            <th>Id</th>
-                            <th>Name</th>
-                            <th>Rekening</th>
-                            {{-- <th>Status</th> --}}
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($data as $item)
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td><img src="{{ asset($item->image) }}" alt="" height="40px" width="110px" />
-                                </td>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->name }}</td>
-                                <td>{{ $item->no_rek }}</td>
-                                {{-- <td>
+                                <th>No</th>
+                                <th>Image</th>
+                                <th>Id</th>
+                                <th>Name</th>
+                                <th>Rekening</th>
+                                {{-- <th>Status</th> --}}
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($data as $item)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td><img src="{{ asset($item->image) }}" alt="" height="40px" width="110px" />
+                                    </td>
+                                    <td>{{ $item->id }}</td>
+                                    <td>{{ $item->name }}</td>
+                                    <td>{{ $item->no_rek }}</td>
+                                    {{-- <td>
                                     @if ($item->status == 0)
                                         <a href="" class="btn btn-sm btn-success m-1">Aktif</a>
                                     @else
                                         <a href="" class="btn btn-sm btn-danger m-1">Tidak Aktif</a>
                                     @endif
                                 </td> --}}
-                                <td>
-                                    <a href="{{ route('payment.edit', $item->id) }}"
-                                        class="btn btn-sm btn-warning m-1">Edit</a>
-                                    <form action="{{ route('payment.destroy', $item->id) }}" method="POST"
-                                        style="display:inline;" onsubmit="return confirmDelete();">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger m-1">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                    <td>
+                                        <a href="{{ route('payment.edit', $item->id) }}"
+                                            class="btn btn-sm btn-warning m-1 text-white">Edit</a>
+                                        <form action="{{ route('payment.destroy', $item->id) }}" method="POST"
+                                            style="display:inline;" onsubmit="return confirmDelete();">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger m-1">Hapus</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
                 <div class="d-flex justify-content-end">
                     {!! $data->appends(request()->query())->links('pagination::bootstrap-4') !!}
                 </div>

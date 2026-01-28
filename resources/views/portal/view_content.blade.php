@@ -1,4 +1,4 @@
-@extends('component.layout.portal')
+@extends('components.layout.portal')
 @section('content')
     <header id="header" class="header d-flex align-items-center fixed-top">
         <div class="container-fluid container-xl position-relative d-flex align-items-center">
@@ -187,7 +187,7 @@
                                 <h5 class="mb-0">@rupiah($data->harga)</h5>
                             </div>
                             @if ($data->jumlah_tiket > 0 && $data->status == 1)
-                                <a href="{{ route('checkout', ['id' => $data->id]) }}" class="btn btn-block text-white"
+                                <a href="{{ route('checkout', ['slug' => $data->slug]) }}" class="btn btn-block text-white"
                                     style="background-color:#5a2d67">Beli Tiket</a>
                             @else
                                 <div
@@ -208,5 +208,5 @@
         </section><!-- /Portfolio Details Section -->
 
     </main>
-    @include('component.layout.footer')
+    @include('components.layout.footer')
 @endsection
