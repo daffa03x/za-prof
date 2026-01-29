@@ -148,11 +148,11 @@ class EventController extends Controller
                 }
 
                 $path = 'image/event/' . date('Y-m');
-                $images = $this->imageService->compress(
+                $images = $this->imageService->compressAndSave(
                     $request->file('image'),
                     $path
                 );
-                $data['image'] = $images;
+                $data['image'] = $images['original'];
             }
 
             $event->update($data);
