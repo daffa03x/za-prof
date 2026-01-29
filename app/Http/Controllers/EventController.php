@@ -152,7 +152,7 @@ class EventController extends Controller
                     $request->file('image'),
                     $path
                 );
-                $data['image'] = $images['original'];
+                $data['image'] = $images;
             }
 
             $event->update($data);
