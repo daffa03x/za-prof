@@ -73,6 +73,8 @@
                                 <th>Telepon Pembeli</th>
                                 <th>Volunteer</th>
                                 <th>Jumlah Tiket</th>
+                                <th>Kode Voucher</th>
+                                <th>Potongan Voucher (Pertiket)</th>
                                 <th>Total Pembayaran</th>
                                 <th>Tanggal Register</th>
                                 <th>Status Pembayaran</th>
@@ -101,6 +103,14 @@
                                         </ul>
                                     </td>
                                     <td>{{ $item->jumlah_tiket }}</td>
+                                    <td>{{ $item->voucher->kode ?? '-' }}</td>
+                                    <td>
+                                        @isset($item->voucher)
+                                            @rupiah($item->voucher->nilai_diskon)
+                                        @else
+                                            -
+                                        @endisset
+                                    </td>
                                     <td>@rupiah($item->total_pembayaran)</td>
                                     <td>{{ $item->tanggal_register }}</td>
                                     <td id="status-{{ $item->id }}">

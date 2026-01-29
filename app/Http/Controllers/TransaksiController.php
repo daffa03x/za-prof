@@ -35,7 +35,7 @@ class TransaksiController extends Controller
         $title = 'Transaksi';
         $payment = Payment::select(['id', 'name'])->get();
 
-        $data = Transaksi::with(['event:id,name', 'payment:id,name'])
+        $data = Transaksi::with(['event:id,name', 'payment:id,name', 'volunteers:id,name,telepon', 'voucher'])
             ->orderByDesc('created_at')
             ->paginate(5);
 
