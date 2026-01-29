@@ -239,9 +239,9 @@
                                         }
                                     </script>
                                 @endif
-                                <a href="https://wa.me/6282121392363" class="btn btn-lg w-100 text-white"
-                                    style="background-color: #5a2d67">
-                                    <i class="bi bi-shield-check"></i> Hubungi Admin
+                                <a href="https://wa.me/6282121392363?text=Halo%20Kak,%20apakah%20pembayaran%20untuk%20sosial%20trip%20saya%20sudah%20masuk%20"
+                                    class="btn btn-lg w-100 text-white" style="background-color: #5a2d67">
+                                    <i class="bi bi-shield-check"></i> Konfirmasi Pembayaran
                                 </a>
                             </div>
                         </div>
