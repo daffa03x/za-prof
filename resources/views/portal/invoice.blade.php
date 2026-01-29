@@ -43,10 +43,10 @@
 
         // Menambahkan custom parameter
         fbq('track', 'Purchase', {
-            content_name: "{{ $data->event->name }}"
-            content_type: 'product'
-            currency: 'IDR'
-            value: "{{ $data->total_pembayaran }}"
+            content_name: "{{ $data->event->name }}",
+            content_type: 'product',
+            currency: 'IDR',
+            value: {{ (int) $data->total_pembayaran }}
         });
     </script>
     <noscript>
