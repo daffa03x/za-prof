@@ -114,15 +114,14 @@
                                     <td>@rupiah($item->total_pembayaran)</td>
                                     <td>{{ $item->tanggal_register }}</td>
                                     <td id="status-{{ $item->id }}">
-                                        @if ($item->status_pembayaran === 'Success')
-                                            <button class="btn btn-sm btn-success m-1">Y</button>
-                                        @elseif($item->status_pembayaran === 'Failed')
-                                            <button onclick="updateStatus('{{ $item->id }}');"
-                                                class="btn btn-sm btn-danger m-1">N</button>
-                                        @else
-                                            <button onclick="updateStatus('{{ $item->id }}');"
-                                                class="btn btn-sm btn-warning m-1">P</button>
-                                        @endif
+                                        <select class="form-control form-control-sm {{ $item->status_pembayaran === 'Success' ? 'bg-success text-white' : ($item->status_pembayaran === 'Failed' ? 'bg-danger text-white' : 'bg-warning text-dark') }}" 
+                                                style="width: auto; display: inline-block; cursor: pointer;"
+                                                onfocus="this.setAttribute('data-prev', this.value)"
+                                                onchange="updateStatus('{{ $item->id }}', this)">
+                                            <option value="Pending" class="bg-white text-dark" {{ $item->status_pembayaran === 'Pending' ? 'selected' : '' }}>P</option>
+                                            <option value="Success" class="bg-white text-dark" {{ $item->status_pembayaran === 'Success' ? 'selected' : '' }}>Y</option>
+                                            <option value="Failed" class="bg-white text-dark" {{ $item->status_pembayaran === 'Failed' ? 'selected' : '' }}>N</option>
+                                        </select>
                                     </td>
 
                                     <td id="tanggal-bayar-{{ $item->id }}">
@@ -159,24 +158,19 @@
     </div>
 
     <script>
-        async function updateStatus(id) {
+        async function updateStatus(id, selectElement) {
             const confirmation = confirm("Apakah Anda yakin ingin memperbarui status transaksi ini?");
+            const previousValue = selectElement.getAttribute('data-prev') || selectElement.value;
+            const newValue = selectElement.value;
+
             if (!confirmation) {
                 console.log("Pembaruan status dibatalkan oleh pengguna.");
+                selectElement.value = previousValue; // Revert
                 return;
             }
 
-            // Get the status element and button
-            const statusElement = document.querySelector(`#status-${id}`);
-            const originalButton = statusElement.querySelector('button');
-
-            // Store original button content and show loading
-            const originalContent = originalButton.innerHTML;
-            const originalClass = originalButton.className;
-            originalButton.innerHTML =
-                `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
-            originalButton.disabled = true;
-            originalButton.className = 'btn btn-sm btn-secondary m-1';
+            // Disable select during request
+            selectElement.disabled = true;
 
             try {
                 // Kirim permintaan untuk memperbarui status transaksi
@@ -187,7 +181,8 @@
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify({
-                        id: id
+                        id: id,
+                        status: newValue
                     })
                 });
 
@@ -196,29 +191,41 @@
 
                 // Check if response was successful (status 200)
                 if (response.ok) {
-                    // Update status button to "Y" after successful update
-                    statusElement.innerHTML = `<button class="btn btn-sm btn-success m-1">Y</button>`;
+                    // Update classes based on new status
+                    let newClass = 'form-control form-control-sm bg-warning text-dark';
+                    if (newValue === 'Success') {
+                        newClass = 'form-control form-control-sm bg-success text-white';
+                    } else if (newValue === 'Failed') {
+                        newClass = 'form-control form-control-sm bg-danger text-white';
+                    }
+                    selectElement.className = newClass;
+                    selectElement.style.width = 'auto';
+                    selectElement.style.display = 'inline-block';
+                    selectElement.setAttribute('data-prev', newValue);
+                    selectElement.disabled = false;
 
                     // Update payment date
                     const tanggalBayarElement = document.querySelector(`#tanggal-bayar-${id}`);
-                    if (tanggalBayarElement && result.tanggal_pembayaran) {
-                        tanggalBayarElement.textContent = result.tanggal_pembayaran;
+                    if (tanggalBayarElement) {
+                        if (result.tanggal_pembayaran) {
+                            tanggalBayarElement.textContent = result.tanggal_pembayaran;
+                        } else {
+                            tanggalBayarElement.textContent = 'Belum Bayar';
+                        }
                     }
 
                     alert(result.message);
                 } else {
-                    // Restore original button on error
-                    originalButton.innerHTML = originalContent;
-                    originalButton.className = originalClass;
-                    originalButton.disabled = false;
+                    // Restore original value on error
+                    selectElement.value = previousValue;
+                    selectElement.disabled = false;
                     alert(result.message || 'Gagal memperbarui status.');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                // Restore original button on error
-                originalButton.innerHTML = originalContent;
-                originalButton.className = originalClass;
-                originalButton.disabled = false;
+                // Restore original value on error
+                selectElement.value = previousValue;
+                selectElement.disabled = false;
                 alert('Terjadi kesalahan. Silakan coba lagi.');
             }
         }
