@@ -378,96 +378,144 @@ class TransaksiController extends Controller
             return response()->json(['message' => 'Item tidak ditemukan!'], 404);
         }
 
-        // Check if there are volunteers to send emails to
-        if ($transaksi->volunteers->isEmpty()) {
-            return response()->json(['message' => 'Tidak ada volunteer yang terdaftar untuk transaksi ini!'], 400);
-        }
+        $newStatus = $request->input('status', 'Success');
+        $oldStatus = $transaksi->status_pembayaran;
 
-        $failedEmails = [];
-        $sentEmails = [];
-
-        // Use database transaction to ensure atomicity
-        DB::beginTransaction();
-
-        try {
-            // Attempt to send email to all volunteers
-            foreach ($transaksi->volunteers as $volunteer) {
-                try {
-                    Mail::to($volunteer->email)->send(
-                        new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/{$transaksi->invoice}")
-                    );
-                    
-                    $sentEmails[] = $volunteer->email;
-                    
-                    Log::info('Ticket email sent', [
-                        'invoice' => $transaksi->invoice,
-                        'volunteer_email' => $volunteer->email,
-                        'user_id' => auth()->id(),
-                    ]);
-                } catch (\Exception $emailException) {
-                    $failedEmails[] = $volunteer->email;
-                    
-                    Log::error('Failed to send ticket email', [
-                        'invoice' => $transaksi->invoice,
-                        'volunteer_email' => $volunteer->email,
-                        'error' => $emailException->getMessage(),
-                        'user_id' => auth()->id(),
-                    ]);
-                }
+        if ($newStatus === 'Success') {
+            // Check if there are volunteers to send emails to
+            if ($transaksi->volunteers->isEmpty()) {
+                return response()->json(['message' => 'Tidak ada volunteer yang terdaftar untuk transaksi ini!'], 400);
             }
 
-            // If any email failed, rollback and return error
-            if (!empty($failedEmails)) {
-                DB::rollBack();
-                
-                Log::warning('Transaction status update aborted due to email failures', [
+            $failedEmails = [];
+            $sentEmails = [];
+
+            // Use database transaction to ensure atomicity
+            DB::beginTransaction();
+
+            try {
+                // Attempt to send email to all volunteers
+                foreach ($transaksi->volunteers as $volunteer) {
+                    try {
+                        Mail::to($volunteer->email)->send(
+                            new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/{$transaksi->invoice}")
+                        );
+                        
+                        $sentEmails[] = $volunteer->email;
+                        
+                        Log::info('Ticket email sent', [
+                            'invoice' => $transaksi->invoice,
+                            'volunteer_email' => $volunteer->email,
+                            'user_id' => auth()->id(),
+                        ]);
+                    } catch (\Exception $emailException) {
+                        $failedEmails[] = $volunteer->email;
+                        
+                        Log::error('Failed to send ticket email', [
+                            'invoice' => $transaksi->invoice,
+                            'volunteer_email' => $volunteer->email,
+                            'error' => $emailException->getMessage(),
+                            'user_id' => auth()->id(),
+                        ]);
+                    }
+                }
+
+                // If any email failed, rollback and return error
+                if (!empty($failedEmails)) {
+                    DB::rollBack();
+                    
+                    Log::warning('Transaction status update aborted due to email failures', [
+                        'transaksi_id' => $transaksi->id,
+                        'invoice' => $transaksi->invoice,
+                        'failed_emails' => $failedEmails,
+                        'sent_emails' => $sentEmails,
+                        'user_id' => auth()->id(),
+                    ]);
+
+                    return response()->json([
+                        'message' => 'Gagal mengirim email ke: ' . implode(', ', $failedEmails) . '. Status pembayaran tidak diperbarui.',
+                        'failed_emails' => $failedEmails,
+                        'sent_emails' => $sentEmails,
+                    ], 500);
+                }
+
+                // All emails sent successfully, now update status
+                $transaksi->update([
+                    'status_pembayaran' => 'Success',
+                    'tanggal_pembayaran' => now(),
+                ]);
+
+                // Re-deduct tickets if status changed FROM Failed to Success
+                if ($oldStatus === 'Failed') {
+                    if ($transaksi->event) {
+                        $transaksi->event->decrement('jumlah_tiket', $transaksi->jumlah_tiket);
+                    }
+                }
+
+                DB::commit();
+
+                Log::info('Transaction status updated to Success', [
                     'transaksi_id' => $transaksi->id,
                     'invoice' => $transaksi->invoice,
-                    'failed_emails' => $failedEmails,
                     'sent_emails' => $sentEmails,
                     'user_id' => auth()->id(),
                 ]);
 
                 return response()->json([
-                    'message' => 'Gagal mengirim email ke: ' . implode(', ', $failedEmails) . '. Status pembayaran tidak diperbarui.',
-                    'failed_emails' => $failedEmails,
+                    'message' => 'Status berhasil diperbarui! Email terkirim ke ' . count($sentEmails) . ' volunteer.',
                     'sent_emails' => $sentEmails,
+                    'tanggal_pembayaran' => now()->format('Y-m-d H:i:s'),
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                Log::error('Error updating transaction status', [
+                    'transaksi_id' => $transaksi->id,
+                    'error' => $e->getMessage(),
+                    'user_id' => auth()->id(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Terjadi kesalahan saat memproses transaksi: ' . $e->getMessage(),
                 ], 500);
             }
+        } else {
+            // Update status to Pending or Failed
+            try {
+                $transaksi->update([
+                    'status_pembayaran' => $newStatus,
+                    'tanggal_pembayaran' => null,
+                ]);
 
-            // All emails sent successfully, now update status
-            $transaksi->update([
-                'status_pembayaran' => 'Success',
-                'tanggal_pembayaran' => now(),
-            ]);
+                // Return tickets if status changed to Failed
+                if ($newStatus === 'Failed' && $oldStatus !== 'Failed') {
+                    if ($transaksi->event) {
+                        $transaksi->event->increment('jumlah_tiket', $transaksi->jumlah_tiket);
+                    }
+                }
 
-            DB::commit();
+                Log::info("Transaction status updated to {$newStatus}", [
+                    'transaksi_id' => $transaksi->id,
+                    'invoice' => $transaksi->invoice,
+                    'user_id' => auth()->id(),
+                ]);
 
-            Log::info('Transaction status updated to Success', [
-                'transaksi_id' => $transaksi->id,
-                'invoice' => $transaksi->invoice,
-                'sent_emails' => $sentEmails,
-                'user_id' => auth()->id(),
-            ]);
+                return response()->json([
+                    'message' => "Status berhasil diperbarui menjadi {$newStatus}!",
+                    'tanggal_pembayaran' => null,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error updating transaction status', [
+                    'transaksi_id' => $transaksi->id,
+                    'error' => $e->getMessage(),
+                    'user_id' => auth()->id(),
+                ]);
 
-            return response()->json([
-                'message' => 'Status berhasil diperbarui! Email terkirim ke ' . count($sentEmails) . ' volunteer.',
-                'sent_emails' => $sentEmails,
-                'tanggal_pembayaran' => now()->format('Y-m-d H:i:s'),
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            Log::error('Error updating transaction status', [
-                'transaksi_id' => $transaksi->id,
-                'error' => $e->getMessage(),
-                'user_id' => auth()->id(),
-            ]);
-
-            return response()->json([
-                'message' => 'Terjadi kesalahan saat memproses transaksi: ' . $e->getMessage(),
-            ], 500);
+                return response()->json([
+                    'message' => 'Terjadi kesalahan saat memperbarui status: ' . $e->getMessage(),
+                ], 500);
+            }
         }
     }
 }
