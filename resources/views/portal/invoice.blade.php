@@ -170,7 +170,7 @@
                             <div class="card-body">
                                 @if ($data->payment->name == 'Qris')
                                     <p>Scan kode QR di bawah</p>
-                                    <img src="{{ asset('image/qris.jpg') }}" alt="QR Code" class="img-fluid mb-3">
+                                    <img src="{{ asset('image/qris_baru.jpeg') }}" alt="QR Code" class="img-fluid mb-3">
                                 @else
                                     <p>Verifikasi pembayaran dengan menghubungi admin dan kirim bukti transfer. Setelah
                                         pembayaran Anda berhasil admin verifikasi, tiket akan segera dikirimkan ke
