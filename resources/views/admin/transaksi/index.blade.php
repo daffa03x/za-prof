@@ -1,4 +1,4 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 <style>
     th,
     td {
@@ -38,10 +38,13 @@
                 <div class="py-4 d-flex justify-content-between align-items-center">
                     <div>
                         {{-- <a href="{{ route('transaksi.create') }}" class="btn btn-success">Add</a> --}}
-                        <button type="button" class="btn btn-info" data-toggle="modal"
-                            data-target="#exportTransaksi">Export</button>
-                        <button type="button" class="btn btn-warning" data-toggle="modal"
-                            data-target="#filterTransaksi">Filter</a>
+                        <!-- <button type="button" class="btn btn-info me-1 text-white" data-toggle="modal"
+                                            data-target="#exportTransaksi">Export</button>
+                                        <button type="button" class="btn btn-warning me-1 text-white" data-toggle="modal"
+                                            data-target="#filterTransaksi">Filter</button> -->
+                        <a href="{{ route('transaksi.trashed') }}" class="btn btn-danger">
+                            Terhapus
+                        </a>
                     </div>
 
                     <form class="d-flex ml-2" method="GET" action="{{ route('transaksi.search') }}">
@@ -52,14 +55,14 @@
                 </div>
 
                 <!-- Modal export campaign -->
-                @include('component.modal.exportTransaksi')
+                @include('components.modal.exportTransaksi')
 
                 <!-- Modal filter campaign -->
-                @include('component.modal.filterTransaksi')
+                @include('components.modal.filterTransaksi')
 
                 <div class="table-responsive">
-                    <table class="table">
-                        <thead>
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
                             <tr>
                                 <th>No</th>
                                 {{-- <th>Id</th> --}}
@@ -70,6 +73,8 @@
                                 <th>Telepon Pembeli</th>
                                 <th>Volunteer</th>
                                 <th>Jumlah Tiket</th>
+                                <th>Kode Voucher</th>
+                                <th>Potongan Voucher (Pertiket)</th>
                                 <th>Total Pembayaran</th>
                                 <th>Tanggal Register</th>
                                 <th>Status Pembayaran</th>
@@ -84,7 +89,7 @@
                                     <td>{{ $loop->iteration }}</td>
                                     {{-- <td>{{ $item->id }}</td> --}}
                                     <td>{{ $item->invoice }}</td>
-                                    <td>{{ $item->name_event }}</td>
+                                    <td>{{ $item->event->name }}</td>
                                     <td>{{ $item->name }}</td>
                                     <td>{{ $item->email }}</td>
                                     <td>{{ $item->telepon }}</td>
@@ -98,28 +103,35 @@
                                         </ul>
                                     </td>
                                     <td>{{ $item->jumlah_tiket }}</td>
+                                    <td>{{ $item->voucher->kode ?? '-' }}</td>
+                                    <td>
+                                        @isset($item->voucher)
+                                            @rupiah($item->voucher->nilai_diskon)
+                                        @else
+                                            -
+                                        @endisset
+                                    </td>
                                     <td>@rupiah($item->total_pembayaran)</td>
                                     <td>{{ $item->tanggal_register }}</td>
                                     <td id="status-{{ $item->id }}">
-                                        @if ($item->status_pembayaran === 'Success')
-                                            <button class="btn btn-sm btn-success m-1">Y</button>
-                                        @elseif($item->status_pembayaran === 'Failed')
-                                            <button onclick="updateStatus('{{ $item->id }}');"
-                                                class="btn btn-sm btn-danger m-1">N</button>
-                                        @else
-                                            <button onclick="updateStatus('{{ $item->id }}');"
-                                                class="btn btn-sm btn-warning m-1">P</button>
-                                        @endif
+                                        <select class="form-control form-control-sm {{ $item->status_pembayaran === 'Success' ? 'bg-success text-white' : ($item->status_pembayaran === 'Failed' ? 'bg-danger text-white' : 'bg-warning text-dark') }}" 
+                                                style="width: auto; display: inline-block; cursor: pointer;"
+                                                onfocus="this.setAttribute('data-prev', this.value)"
+                                                onchange="updateStatus('{{ $item->id }}', this)">
+                                            <option value="Pending" class="bg-white text-dark" {{ $item->status_pembayaran === 'Pending' ? 'selected' : '' }}>P</option>
+                                            <option value="Success" class="bg-white text-dark" {{ $item->status_pembayaran === 'Success' ? 'selected' : '' }}>Y</option>
+                                            <option value="Failed" class="bg-white text-dark" {{ $item->status_pembayaran === 'Failed' ? 'selected' : '' }}>N</option>
+                                        </select>
                                     </td>
 
-                                    <td>
+                                    <td id="tanggal-bayar-{{ $item->id }}">
                                         @if ($item->tanggal_pembayaran === null)
                                             Belum Bayar
                                         @else
                                             {{ $item->tanggal_pembayaran }}
                                         @endif
                                     </td>
-                                    <td>{{ $item->name_payment }}</td>
+                                    <td>{{ $item->payment->name }}</td>
                                     <td>
                                         <a href="{{ route('transaksi.show', $item->invoice) }}"
                                             class="btn btn-sm btn-info m-1 text-white">Lihat</a>
@@ -146,12 +158,19 @@
     </div>
 
     <script>
-        async function updateStatus(id) {
+        async function updateStatus(id, selectElement) {
             const confirmation = confirm("Apakah Anda yakin ingin memperbarui status transaksi ini?");
+            const previousValue = selectElement.getAttribute('data-prev') || selectElement.value;
+            const newValue = selectElement.value;
+
             if (!confirmation) {
                 console.log("Pembaruan status dibatalkan oleh pengguna.");
+                selectElement.value = previousValue; // Revert
                 return;
             }
+
+            // Disable select during request
+            selectElement.disabled = true;
 
             try {
                 // Kirim permintaan untuk memperbarui status transaksi
@@ -162,24 +181,51 @@
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify({
-                        id: id
+                        id: id,
+                        status: newValue
                     })
                 });
 
                 const result = await response.json();
                 console.info('Response:', result);
 
-                // Menentukan elemen tombol berdasarkan ID
-                const statusElement = document.querySelector(`#status-${id}`);
+                // Check if response was successful (status 200)
+                if (response.ok) {
+                    // Update classes based on new status
+                    let newClass = 'form-control form-control-sm bg-warning text-dark';
+                    if (newValue === 'Success') {
+                        newClass = 'form-control form-control-sm bg-success text-white';
+                    } else if (newValue === 'Failed') {
+                        newClass = 'form-control form-control-sm bg-danger text-white';
+                    }
+                    selectElement.className = newClass;
+                    selectElement.style.width = 'auto';
+                    selectElement.style.display = 'inline-block';
+                    selectElement.setAttribute('data-prev', newValue);
+                    selectElement.disabled = false;
 
-                // Mengupdate status tombol menjadi "Y" setelah update
-                if (statusElement && result.message === 'Status berhasil diperbarui!') {
-                    statusElement.innerHTML = `<button class="btn btn-sm btn-success m-1">Y</button>`;
+                    // Update payment date
+                    const tanggalBayarElement = document.querySelector(`#tanggal-bayar-${id}`);
+                    if (tanggalBayarElement) {
+                        if (result.tanggal_pembayaran) {
+                            tanggalBayarElement.textContent = result.tanggal_pembayaran;
+                        } else {
+                            tanggalBayarElement.textContent = 'Belum Bayar';
+                        }
+                    }
+
+                    alert(result.message);
+                } else {
+                    // Restore original value on error
+                    selectElement.value = previousValue;
+                    selectElement.disabled = false;
+                    alert(result.message || 'Gagal memperbarui status.');
                 }
-
-                alert(result.message);
             } catch (error) {
                 console.error('Error:', error);
+                // Restore original value on error
+                selectElement.value = previousValue;
+                selectElement.disabled = false;
                 alert('Terjadi kesalahan. Silakan coba lagi.');
             }
         }

@@ -2,20 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+/**
+ * Class DashboardController
+ *
+ * Handles the dashboard display.
+ */
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    /**
+     * Display the dashboard.
+     */
+    public function index(): View
     {
-        try {
-            $title = 'Dashboard';
+        $title = 'Dashboard';
 
-            return view('admin.dashboard.index', compact('title'));
-
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        return view('admin.dashboard.index', compact('title'));
     }
 }

@@ -3,31 +3,66 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Services\ImageService;
 use App\Http\Requests\StorePaymentRequest;
 use App\Http\Requests\UpdatePaymentRequest;
 use Illuminate\Http\Request;
-use File;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
+/**
+ * Class PaymentController
+ *
+ * Handles CRUD operations for payment methods including soft delete management.
+ */
 class PaymentController extends Controller
 {
     /**
+     * The image service instance.
+     */
+    protected ImageService $imageService;
+
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
+    /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): View
     {
         $title = 'Payment';
 
-        $data = Payment::whereNull('deleted_at')
-                        ->orderBy('created_at', 'desc')
-                        ->paginate(5);
+        $data = Payment::query()
+            ->orderByDesc('created_at')
+            ->paginate(5);
 
         return view('admin.payment.index', compact('data', 'title'));
     }
 
     /**
+     * Display a listing of trashed resources.
+     */
+    public function trashed(): View
+    {
+        $title = 'Payment Terhapus';
+
+        $data = Payment::onlyTrashed()
+            ->orderByDesc('deleted_at')
+            ->paginate(5);
+
+        return view('admin.payment.trashed', compact('title', 'data'));
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(): View
     {
         $title = "Add Payment";
 
@@ -37,116 +72,205 @@ class PaymentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePaymentRequest $request)
+    public function store(StorePaymentRequest $request): RedirectResponse
     {
         try {
             $data = $request->validated();
 
-            if($request->hasFile('image')) {
-                $image = $request->file('image');
-                // Nama image
-                $nama_photo = date('Y-m-d_His').$image->getClientOriginalName();
-                // Simpan ke direktori
-                $image->move('image/payment/'.date('Y-m').'/', $nama_photo);
-                // Nama Image File
-                $data['image'] = 'image/payment/'.date('Y-m') .'/'. $nama_photo;    
-            }else{
-                $data['image'] = null;
+            if ($request->hasFile('image')) {
+                $path = 'image/payment/' . date('Y-m');
+                $data['image'] = $this->imageService->compress(
+                    $request->file('image'),
+                    $path
+                );
             }
 
-            // Status default
-            $data['status'] = 1;
+            $data['status'] = true;
 
             Payment::create($data);
+            
+            // Clear payment cache
+            Cache::forget('active_payment_methods');
 
-            return redirect()->route('payment.index')->with('success', 'Success');
+            Log::info('Payment method created', [
+                'payment_name' => $data['name'],
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('payment.index')->with('success', 'Payment berhasil ditambahkan');
         } catch (\Exception $e) {
-            return redirect()->route('payment.create')->with('error', 'Failed');
+            Log::error('Error creating payment method', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect()->route('payment.create')->with('error', 'Gagal menambahkan payment');
         }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Payment $payment)
+    public function show(Payment $payment): View
     {
-        //
+        $title = 'Show Payment';
+
+        return view('admin.payment.show', compact('title', 'payment'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Payment $payment)
+    public function edit(Payment $payment): View
     {
         $title = 'Edit Payment';
 
-        $data = $payment;
-
-        return view('admin.payment.edit', compact('title', 'data'));
+        return view('admin.payment.edit', compact('title', 'payment'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePaymentRequest $request, Payment $payment)
+    public function update(UpdatePaymentRequest $request, Payment $payment): RedirectResponse
     {
         try {
-            // Validasi data request
             $data = $request->validated();
 
-            if($request->hasFile('image')) {
-                File::delete($payment->image);
-                $image = $request->file('image');
-                // Nama image
-                $nama_photo = date('Y-m-d_His').$image->getClientOriginalName();
-                // Simpan ke direktori
-                $image->move('image/payment/'.date('Y-m').'/', $nama_photo);
-                // Nama Image File
-                $data['image'] = 'image/payment/'.date('Y-m') .'/'. $nama_photo;    
-            }else{
-                $data['image'] = $payment->image;
+            if ($request->hasFile('image')) {
+                // Delete old image
+                if ($payment->image) {
+                    $this->imageService->delete($payment->image);
+                }
+
+                $path = 'image/payment/' . date('Y-m');
+                $data['image'] = $this->imageService->compress(
+                    $request->file('image'),
+                    $path
+                );
             }
 
-            // Update data payment yang ada
             $payment->update($data);
+            
+            // Clear payment cache
+            Cache::forget('active_payment_methods');
 
-            return redirect()->route('payment.index')->with('success', 'payment updated successfully');
+            Log::info('Payment method updated', [
+                'payment_id' => $payment->id,
+                'payment_name' => $payment->name,
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('payment.index')->with('success', 'Payment berhasil diperbarui');
         } catch (\Exception $e) {
-            return redirect()->route('payment.edit', $payment->id)->with('error', 'Failed to update payment');
+            Log::error('Error updating payment method', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect()->route('payment.edit', $payment)->with('error', 'Gagal memperbarui payment');
         }
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage (soft delete).
      */
-    public function destroy(Payment $payment)
+    public function destroy(Payment $payment): RedirectResponse
     {
         try {
-            $payment->delete(); // Melakukan soft delete
-            return redirect()->route('payment.index')->with('success', 'success');
+            $paymentId = $payment->id;
+            $paymentName = $payment->name;
+            
+            $payment->delete();
+            Cache::forget('active_payment_methods');
+            
+            Log::info('Payment method soft deleted', [
+                'payment_id' => $paymentId,
+                'payment_name' => $paymentName,
+                'user_id' => auth()->id(),
+            ]);
+            
+            return redirect()->route('payment.index')->with('success', 'Payment berhasil dihapus');
         } catch (\Exception $e) {
-            return redirect()->route('payment.index')->with('error', 'failed');
+            Log::error('Error deleting payment method', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect()->route('payment.index')->with('error', 'Gagal menghapus payment');
         }
     }
 
-    public function search(Request $request)
+    /**
+     * Restore the specified trashed resource.
+     */
+    public function restore(int $id): RedirectResponse
     {
-        $title = "Search Payment";   
-        $search = $request->search;
+        try {
+            $payment = Payment::onlyTrashed()->findOrFail($id);
+            $payment->restore();
 
-        // Mulai query
-        $query = Payment::whereNull('deleted_at')
-                        ->orderBy('created_at', 'desc');
+            Log::info('Payment method restored', [
+                'payment_id' => $payment->id,
+                'payment_name' => $payment->name,
+                'user_id' => auth()->id(),
+            ]);
 
-        // Jika ada pencarian, terapkan filter
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%');
-            });
+            return redirect()->route('payment.trashed')->with('success', 'Payment berhasil dipulihkan');
+        } catch (\Exception $e) {
+            Log::error('Error restoring payment method', [
+                'payment_id' => $id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect()->route('payment.trashed')->with('error', 'Gagal memulihkan payment');
         }
+    }
 
-        // Ambil data dengan paginasi
-        $data = $query->paginate(5);
+    /**
+     * Permanently delete the specified trashed resource.
+     */
+    public function forceDelete(int $id): RedirectResponse
+    {
+        try {
+            $payment = Payment::onlyTrashed()->findOrFail($id);
+            $paymentName = $payment->name;
+
+            // Delete image permanently
+            if ($payment->image && file_exists(public_path($payment->image))) {
+                unlink(public_path($payment->image));
+            }
+
+            $payment->forceDelete();
+
+            Log::warning('Payment method permanently deleted', [
+                'payment_id' => $id,
+                'payment_name' => $paymentName,
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('payment.trashed')->with('success', 'Payment berhasil dihapus permanen');
+        } catch (\Exception $e) {
+            Log::error('Error force deleting payment method', [
+                'payment_id' => $id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect()->route('payment.trashed')->with('error', 'Gagal menghapus payment permanen');
+        }
+    }
+
+    /**
+     * Search payments.
+     */
+    public function search(Request $request): View
+    {
+        $title = "Search Payment";
+
+        $data = Payment::query()
+            ->orderByDesc('created_at')
+            ->when($request->search, fn($q) => 
+                $q->where('name', 'like', '%' . $request->search . '%')
+            )
+            ->paginate(5);
 
         return view('admin.payment.index', compact('title', 'data'));
     }

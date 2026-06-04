@@ -1,84 +1,55 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
-<div class="container mt-4">
-    
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <!-- Menampilkan Notifikasi Sukses -->
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+
+                {{-- Alerts --}}
+                <x-form-alerts />
+
+                {{-- Header --}}
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">
+                        <i class="fas fa-code me-2"></i>Tambah Pixel
+                    </h4>
+                    <a href="{{ route('pixel.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Kembali
+                    </a>
                 </div>
-            @endif
 
-            <!-- Menampilkan Notifikasi Error -->
-            @if(session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
-            @endif
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-edit me-2"></i>Form Pixel
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="POST" action="{{ route('pixel.store') }}">
+                            @csrf
 
-            <!-- Menampilkan Pesan Validasi Error -->
-            @if($errors->any())
-                <div class="alert alert-danger">
-                    <ul>
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-            
-            <div class="py-4 d-flex justify-content-between align-items-center">
-                <div>
-                    <a href="{{ route('pixel.index') }}" class="btn btn-secondary">Kembali</a>
-                </div>
-            </div>
+                            {{-- Pixel Name --}}
+                            <x-form-input name="name" label="Nama Pixel" placeholder="Contoh: FB Pixel Utama"
+                                :required="true" />
 
-            <div class="card">
-                <div class="card-header">Buat Pixel</div>
+                            {{-- Pixel Type --}}
+                            <x-form-select name="type" label="Tipe Pixel" :options="['Meta' => 'Meta (Facebook/Instagram)', 'Tiktok' => 'TikTok']" :required="true" />
 
-                <div class="card-body">
-                    <form method="POST" action="{{ route('pixel.store') }}" enctype="multipart/form-data">
+                            {{-- Pixel Code --}}
+                            <x-form-input name="pixel_code" label="Kode Pixel" type="text"
+                                placeholder="Masukkan ID Pixel dari platform (contoh: 123456789)" :required="true" />
 
-                    @csrf
-                        <div class="form-group">
-                            <label for="name">Name</label>
-                            <input type="text" class="form-control @error('name') is-invalid @enderror" name="name" required>
-                                @error('name')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                        </div>
-                        <div class="form-group">
-                            <label for="type">Type Event</label>
-                            <select id="type" name="type" class="form-control @error('type') is-invalid @enderror">
-                                <option value="" selected>Choose...</option>
-                                <option value="Meta">Meta</option>
-                                <option value="Tiktok">Tiktok</option>
-                            </select>
-                            @error('type')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-                        <div class="form-group">
-                            <label for="id_event">Id Event</label>
-                            <input type="number" class="form-control @error('id_event') is-invalid @enderror" name="id_event" required>
-                                @error('id_event')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                        </div>
-                        <button type="submit" class="btn btn-primary">Simpan</button>
-                    </form>
+                            {{-- Submit --}}
+                            <div class="d-flex gap-2 pt-3 border-top">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Simpan Pixel
+                                </button>
+                                <a href="{{ route('pixel.index') }}" class="btn btn-outline-secondary">
+                                    Batal
+                                </a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 @endsection

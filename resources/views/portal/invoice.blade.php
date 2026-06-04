@@ -1,4 +1,4 @@
-@extends('component.layout.portal')
+@extends('components.layout.portal')
 
 
 @section('content')
@@ -43,10 +43,10 @@
 
         // Menambahkan custom parameter
         fbq('track', 'Purchase', {
-            content_name: "{{ $data->event->name }}"
-            content_type: 'product'
-            currency: 'IDR'
-            value: "{{ $data->total_pembayaran }}"
+            content_name: "{{ $data->event->name }}",
+            content_type: 'product',
+            currency: 'IDR',
+            value: {{ (int) $data->total_pembayaran }}
         });
     </script>
     <noscript>
@@ -170,7 +170,7 @@
                             <div class="card-body">
                                 @if ($data->payment->name == 'Qris')
                                     <p>Scan kode QR di bawah</p>
-                                    <img src="{{ asset('image/qris.jpg') }}" alt="QR Code" class="img-fluid mb-3">
+                                    <img src="{{ asset('image/qris_baru.jpeg') }}" alt="QR Code" class="img-fluid mb-3">
                                 @else
                                     <p>Verifikasi pembayaran dengan menghubungi admin dan kirim bukti transfer. Setelah
                                         pembayaran Anda berhasil admin verifikasi, tiket akan segera dikirimkan ke
@@ -239,9 +239,9 @@
                                         }
                                     </script>
                                 @endif
-                                <a href="https://wa.me/6282121392363" class="btn btn-lg w-100 text-white"
-                                    style="background-color: #5a2d67">
-                                    <i class="bi bi-shield-check"></i> Hubungi Admin
+                                <a href="https://wa.me/6282121392363?text=Halo%20Kak,%20apakah%20pembayaran%20untuk%20sosial%20trip%20saya%20sudah%20masuk%20"
+                                    class="btn btn-lg w-100 text-white" style="background-color: #5a2d67">
+                                    <i class="bi bi-shield-check"></i> Konfirmasi Pembayaran
                                 </a>
                             </div>
                         </div>
@@ -318,7 +318,7 @@
         </section><!-- /Portfolio Details Section -->
 
     </main>
-    @include('component.layout.footer')
+    @include('components.layout.footer')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
