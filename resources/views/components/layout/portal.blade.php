@@ -9,6 +9,7 @@
         content="Zillenial Action adalah sebuah yayasan yang didirikan oleh anak muda Indonesia dengan
                                 semangat untuk mendorong perubahan positif dan berkelanjutan.">
     <meta name="keywords" content="yayasan yang didirikan oleh anak muda Indonesia">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Favicons -->
     <link href="{{ asset('assets/img/Logo-ZA.png') }}" rel="icon">

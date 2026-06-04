@@ -1,177 +1,127 @@
-<!-- resources/views/companies/create.blade.php -->
-
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
     <div class="container mt-4">
-
         <div class="row justify-content-center">
-            <div class="col-md-8">
-                <!-- Menampilkan Notifikasi Sukses -->
-                @if (session('success'))
-                    <div class="alert alert-success">
-                        {{ session('success') }}
+            <div class="col-md-10 col-lg-8">
+
+                {{-- Alerts --}}
+                <x-form-alerts />
+
+                {{-- Header --}}
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Edit Event
+                    </h4>
+                    <a href="{{ route('event.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Kembali
+                    </a>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fas fa-edit me-2"></i>Form Edit Event
                     </div>
-                @endif
-
-                <!-- Menampilkan Notifikasi Error -->
-                @if (session('error'))
-                    <div class="alert alert-danger">
-                        {{ session('error') }}
-                    </div>
-                @endif
-
-                <!-- Menampilkan Pesan Validasi Error -->
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <div class="card">
-                    <div class="card-header">{{ $title }}</div>
-
-                    <div class="card-body">
-                        <form action="{{ route('event.update', $data->id) }}" method="POST" enctype="multipart/form-data">
+                    <div class="card-body p-4">
+                        <form method="POST" action="{{ route('event.update', $event->slug) }}"
+                            enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
 
-                            <div class="form-group">
-                                <label for="image">Unggah gambar/poster/banner</label>
-                                <p class="text-danger small">Direkomendasikan 724 x 340px dan tidak lebih dari 2Mb</p>
-                                @if ($data->image)
-                                    <div class="mb-2">
-                                        <img src="{{ asset($data->image) }}" alt="Event Image" style="width: 100px;">
-                                    </div>
-                                @endif
-                                <input type="file" class="form-control @error('image') is-invalid @enderror"
-                                    id="image" name="image">
-                                @error('image')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            {{-- Image Upload --}}
+                            <x-form-file name="image" label="Gambar/Poster Event"
+                                hint="Direkomendasikan 724 x 340px, maksimal 2MB (JPG/PNG)" :current-image="$event->image" />
+
+                            {{-- Event Name --}}
+                            <x-form-input name="name" label="Nama Event" placeholder="Masukkan nama event"
+                                :value="$event->name" :required="true" />
+
+                            {{-- Slug --}}
+                            <x-form-input name="slug" label="Slug (URL)" placeholder="contoh: social-trip-bandung"
+                                :value="$event->slug" hint="URL-friendly. Otomatis diupdate jika nama berubah." />
+
+                            {{-- Website & Mitra --}}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <x-form-input name="website" label="Website" type="url"
+                                        placeholder="https://example.com" :value="$event->website" />
+                                </div>
+                                <div class="col-md-6">
+                                    <x-form-input name="mitra" label="Mitra" placeholder="Nama mitra/sponsor"
+                                        :value="$event->mitra" />
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="name">Name</label>
-                                <input type="text" class="form-control @error('name') is-invalid @enderror"
-                                    id="name" name="name" value="{{ old('name', $data->name) }}" required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label for="website">Website</label>
-                                    <input type="url" class="form-control @error('website') is-invalid @enderror"
-                                        id="website" name="website" value="{{ old('website', $data->website) }}">
-                                    @error('website')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                            {{-- Date & Time --}}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <x-form-input name="waktu_mulai" label="Waktu Mulai" type="datetime-local"
+                                        :value="$event->waktu_mulai" :required="true" />
                                 </div>
-                                <div class="form-group col-md-6">
-                                    <label for="mitra">Mitra</label>
-                                    <input type="text" class="form-control @error('mitra') is-invalid @enderror"
-                                        id="mitra" name="mitra" value="{{ old('mitra', $data->mitra) }}">
-                                    @error('mitra')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                <div class="col-md-6">
+                                    <x-form-input name="waktu_berakhir" label="Waktu Berakhir" type="datetime-local"
+                                        :value="$event->waktu_berakhir" :required="true" />
                                 </div>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label for="waktu_mulai">Tanggal Mulai</label>
-                                    <input type="datetime-local"
-                                        class="form-control @error('waktu_mulai') is-invalid @enderror" name="waktu_mulai"
-                                        value="{{ old('waktu_mulai', $data->waktu_mulai) }}">
-                                    @error('waktu_mulai')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
+
+                            {{-- Location --}}
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <x-form-input name="nama_tempat" label="Nama Tempat" placeholder="Contoh: Gedung Sate"
+                                        :value="$event->nama_tempat" :required="true" />
                                 </div>
-                                <div class="form-group col-md-6">
-                                    <label for="waktu_berakhir">Tanggal Berakhir</label>
-                                    <input type="datetime-local"
-                                        class="form-control @error('waktu_berakhir') is-invalid @enderror"
-                                        name="waktu_berakhir" value="{{ old('waktu_berakhir', $data->waktu_berakhir) }}">
-                                    @error('tanggal_berakhir')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
+                                <div class="col-md-4">
+                                    <x-form-input name="kota" label="Kota" placeholder="Contoh: Bandung"
+                                        :value="$event->kota" :required="true" />
                                 </div>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-8">
-                                    <label for="nama_tempat">Nama Tempat</label>
-                                    <input type="text" class="form-control @error('nama_tempat') is-invalid @enderror"
-                                        name="nama_tempat" value="{{ old('nama_tempat', $data->nama_tempat) }}">
-                                    @error('nama_tempat')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
+
+                            <x-form-input name="alamat" label="Alamat Lengkap"
+                                placeholder="Masukkan alamat lengkap lokasi event" :value="$event->alamat" :required="true" />
+
+                            {{-- Price & Tickets --}}
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="harga" class="form-label fw-semibold">
+                                            Harga Tiket <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">Rp</span>
+                                            <input type="text" class="form-control @error('harga') is-invalid @enderror"
+                                                id="harga" name="harga" placeholder="0" oninput="formatNumber(this)"
+                                                value="{{ old('harga', $event->harga) }}" required>
+                                            @error('harga')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <small class="text-muted">Masukkan 0 untuk event gratis</small>
+                                    </div>
                                 </div>
-                                <div class="form-group col-md-4">
-                                    <label for="kota">Kota</label>
-                                    <input type="text" class="form-control @error('kota') is-invalid @enderror"
-                                        name="kota" value="{{ old('kota', $data->kota) }}">
-                                    @error('kota')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="alamat">Alamat</label>
-                                <input type="text" class="form-control @error('alamat') is-invalid @enderror"
-                                    name="alamat" value="{{ old('alamat', $data->alamat) }}">
-                                @error('alamat')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group flex-nowrap col-md-8">
-                                    <label for="harga">Harga</label>
-                                    <input type="text" class="form-control @error('harga') is-invalid @enderror"
-                                        name="harga" id="harga" oninput="formatNumber(this)"
-                                        value="{{ old('harga', $data->harga) }}">
-                                    @error('harga')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
-                                </div>
-                                <div class="form-group col-md-4">
-                                    <label for="jumlah_tiket">Jumlah Tiket</label>
-                                    <input type="number"
-                                        class="form-control @error('jumlah_tiket') is-invalid @enderror"
-                                        name="jumlah_tiket" value="{{ old('jumlah_tiket', $data->jumlah_tiket) }}">
-                                    @error('jumlah_tiket')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
+                                <div class="col-md-4">
+                                    <x-form-input name="jumlah_tiket" label="Jumlah Tiket" type="number" placeholder="100"
+                                        :value="$event->jumlah_tiket" :required="true" />
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="deskripsi">Deskripsi/Syarat dan Ketentuan</label>
-                                <!-- Create the editor container -->
-                                <div id="editor">
-                                    {{-- {{ old('deskripsi', strip_tags($data->deskripsi)) }} --}}
-                                    {!! $data->deskripsi !!}
-                                </div>
+
+                            {{-- Description --}}
+                            <div class="mb-3">
+                                <label for="deskripsi" class="form-label fw-semibold">
+                                    Deskripsi & Syarat Ketentuan <span class="text-danger">*</span>
+                                </label>
+                                <div id="editor">{!! $event->deskripsi !!}</div>
                                 <input type="hidden" name="deskripsi" id="content">
                             </div>
 
-                            <button type="submit" class="btn btn-primary mt-4">Update</button>
+                            {{-- Submit --}}
+                            <div class="d-flex gap-2 pt-3 border-top">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save me-1"></i>Update Event
+                                </button>
+                                <a href="{{ route('event.index') }}" class="btn btn-outline-secondary">
+                                    Batal
+                                </a>
+                            </div>
                         </form>
                     </div>
                 </div>

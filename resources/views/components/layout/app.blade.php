@@ -21,6 +21,9 @@
     <!-- Include stylesheet -->
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
+    <link href="{{ asset('assets/img/Logo-ZA.png') }}" rel="icon">
+    <link href="{{ asset('assets/img/Logo-ZA.png') }}" rel="Logo-ZA">
 </head>
 
 <body>
@@ -51,6 +54,10 @@
                         <li class="nav-item">
                             <a class="nav-link {{ Request::is('payment') ? 'active' : '' }}" aria-current="page"
                                 href="{{ url('/payment') }}">Metode Pembayaran</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ Request::is('voucher*') ? 'active' : '' }}" aria-current="page"
+                                href="{{ url('/voucher') }}">Kode Voucher</a>
                         </li>
                     </ul>
                     <div class="nav-item dropdown">

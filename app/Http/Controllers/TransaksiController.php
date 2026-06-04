@@ -6,329 +6,516 @@ use Carbon\Carbon;
 use App\Models\Transaksi;
 use App\Models\Event;
 use App\Models\Payment;
+use App\Models\Volunteer;
 use App\Exports\ExportTransaksi;
-use DB;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Http\Requests\StoreTransaksiRequest;
 use App\Http\Requests\UpdateTransaksiRequest;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 use App\Mail\SendTicket;
 
-
+/**
+ * Class TransaksiController
+ *
+ * Handles CRUD operations for transactions including soft delete management.
+ */
 class TransaksiController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): View
     {
         $title = 'Transaksi';
+        $payment = Payment::select(['id', 'name'])->get();
 
-        $payment = Payment::get();
+        $data = Transaksi::with(['event:id,name', 'payment:id,name', 'volunteers:id,name,telepon', 'voucher'])
+            ->orderByDesc('created_at')
+            ->paginate(5);
 
-        $data = Transaksi::select('transaksis.*', 'payments.name as name_payment', 'events.name as name_event')
-                    ->whereNull('transaksis.deleted_at')
-                    ->orderBy('transaksis.created_at', 'desc')
-                    ->leftJoin('payments', 'transaksis.id_payment', '=', 'payments.id')
-                    ->leftJoin('events', 'transaksis.id_event', '=', 'events.id')
-                    ->paginate(5);
-        
         return view('admin.transaksi.index', compact('title', 'data', 'payment'));
+    }
+
+    /**
+     * Display a listing of trashed resources.
+     */
+    public function trashed(): View
+    {
+        $title = 'Transaksi Terhapus';
+
+        $data = Transaksi::onlyTrashed()
+            ->with(['event:id,name', 'payment:id,name'])
+            ->orderByDesc('deleted_at')
+            ->paginate(5);
+
+        return view('admin.transaksi.trashed', compact('title', 'data'));
     }
 
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(): View
     {
         $title = 'Create Transaksi';
-        $payment = Payment::get();
+        $payment = Payment::select(['id', 'name'])->where('status', true)->get();
+        $events = Event::select(['id', 'name', 'harga'])->where('status', true)->get();
 
-        return view('admin.transaksi.create', compact('title', 'payment'));
+        return view('admin.transaksi.create', compact('title', 'payment', 'events'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreTransaksiRequest $request)
+    public function store(StoreTransaksiRequest $request): RedirectResponse
     {
         try {
-            $query = $request->validated();
-            
-            $event = Event::find($query['id_event']);
-            
-            // Buat nomor invoice
-            $transaksi = Transaksi::orderBy('ID', 'desc')->first();
-            $invoice = date('Ymd') . $transaksi->id + 1;
+            $validated = $request->validated();
 
-            $data = [
-                'id_event' => $query['id_event'],
+            $event = Event::findOrFail($validated['id_event']);
+
+            $lastTransaksi = Transaksi::orderByDesc('id')->first();
+            $invoice = date('Ymd') . (($lastTransaksi?->id ?? 0) + 1);
+
+            Transaksi::create([
+                'id_event' => $validated['id_event'],
                 'invoice' => $invoice,
-                'jumlah_tiket' => $query['jumlah_tiket'],
-                'total_pembayaran' => $query['jumlah_tiket'] * $event->harga,
-                'name' => $query['name'],
-                'email' => $query['email'],
-                'telepon' => $query['telepon'],
+                'jumlah_tiket' => $validated['jumlah_tiket'],
+                'total_pembayaran' => $validated['jumlah_tiket'] * $event->harga,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'telepon' => $validated['telepon'],
                 'status_pembayaran' => 'Pending',
                 'tanggal_register' => now(),
                 'tanggal_pembayaran' => null,
-                'id_payment' => $query['id_payment']
-            ];
+                'id_payment' => $validated['id_payment'],
+            ]);
 
-            $transaksi = Transaksi::create($data);
-            
-            return redirect()->route('transaksi.index')->with('success', 'Success');
+            Log::info('Transaction created via admin', [
+                'invoice' => $invoice,
+                'event_id' => $validated['id_event'],
+                'total' => $validated['jumlah_tiket'] * $event->harga,
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('transaksi.index')->with('success', 'Transaksi berhasil ditambahkan');
         } catch (\Exception $e) {
-            return redirect()->route('transaksi.create')->with('error', 'Failed');
+            Log::error('Error creating transaction', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect()->route('transaksi.create')->with('error', 'Gagal menambahkan transaksi');
         }
     }
-
 
     /**
      * Display the specified resource.
      */
-    public function show(Transaksi $transaksi)
+    public function show(Transaksi $transaksi): View
     {
         $title = 'Show Transaksi';
+        $transaksi->load(['event', 'payment', 'volunteers']);
 
-        $data = $transaksi->load('event', 'payment');
-
-        return view('admin.transaksi.show', compact('title', 'data'));
+        return view('admin.transaksi.show', compact('title', 'transaksi'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Transaksi $transaksi)
+    public function edit(Transaksi $transaksi): View
     {
         $title = 'Edit Transaksi';
-        $payment = Payment::get();
-        $data = $transaksi;
+        $payment = Payment::select(['id', 'name'])->get();
+        $events = Event::select(['id', 'name', 'harga'])->get();
 
-        return view('admin.transaksi.edit', compact('title','data', 'payment'));
+        return view('admin.transaksi.edit', compact('title', 'transaksi', 'payment', 'events'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateTransaksiRequest $request, Transaksi $transaksi)
+    public function update(UpdateTransaksiRequest $request, Transaksi $transaksi): RedirectResponse
     {
         try {
-            $query = $request->validated();
+            $validated = $request->validated();
 
-            $event = Event::find($query['id_event']);
+            $event = Event::findOrFail($validated['id_event']);
 
-            $data = [
-                'id_event' => $query['id_event'],
-                'jumlah_tiket' => $query['jumlah_tiket'],
-                'total_pembayaran' => $query['jumlah_tiket'] * $event->harga,
-                'name' => $query['name'],
-                'email' => $query['email'],
-                'telepon' => $query['telepon'],
-                'status_pembayaran' => 'Pending', // Jika status tetap Pending
-                'tanggal_register' => now(),
-                'tanggal_pembayaran' => null,
-                'id_payment' => $query['id_payment']
-            ];
+            $transaksi->update([
+                'id_event' => $validated['id_event'],
+                'jumlah_tiket' => $validated['jumlah_tiket'],
+                'total_pembayaran' => $validated['jumlah_tiket'] * $event->harga,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'telepon' => $validated['telepon'],
+                'id_payment' => $validated['id_payment'],
+            ]);
 
-            // Hanya update data selain invoice
-            $transaksi->update($data);
+            Log::info('Transaction updated', [
+                'transaksi_id' => $transaksi->id,
+                'invoice' => $transaksi->invoice,
+                'user_id' => auth()->id(),
+            ]);
 
-            return redirect()->route('transaksi.index')->with('success', 'Success');
+            return redirect()->route('transaksi.index')->with('success', 'Transaksi berhasil diperbarui');
         } catch (\Exception $e) {
-            return redirect()->route('transaksi.index')->with('error', 'Failed');
+            Log::error('Error updating transaction', [
+                'transaksi_id' => $transaksi->id,
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect()->route('transaksi.index')->with('error', 'Gagal memperbarui transaksi');
         }
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage (soft delete).
      */
-    public function destroy(Transaksi $transaksi)
+    public function destroy(Transaksi $transaksi): RedirectResponse
     {
         try {
-            // Sebelum menghapus (soft delete) transaksi, kembalikan jumlah_tiket
-            // Pastikan relasi 'event' sudah didefinisikan di model Transaksi
-            // dan kolom 'jumlah_tiket' ada di tabel 'events'.
-            if ($transaksi->event) { // Memastikan ada event terkait
-                $event = $transaksi->event; // Mendapatkan objek event yang terkait
-                $event->jumlah_tiket += $transaksi->jumlah_tiket; // Tambahkan jumlah tiket kembali ke jumlah_tiket
-                $event->save(); // Simpan perubahan jumlah_tiket event
+            // Return tickets to event
+            if ($transaksi->event) {
+                $transaksi->event->increment('jumlah_tiket', $transaksi->jumlah_tiket);
             }
 
-            $transaksi->delete(); // Lakukan soft delete pada transaksi
+            $transaksiId = $transaksi->id;
+            $invoice = $transaksi->invoice;
+            
+            $transaksi->delete();
 
-            return redirect()->route('transaksi.index')->with('success', 'Transaksi berhasil dihapus dan jumlah_tiket dikembalikan.');
+            Log::info('Transaction soft deleted', [
+                'transaksi_id' => $transaksiId,
+                'invoice' => $invoice,
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('transaksi.index')->with('success', 'Transaksi berhasil dihapus');
         } catch (\Exception $e) {
-            // Log error untuk debugging
-            \Log::error("Error saat menghapus transaksi ID {$transaksi->id} dan mengembalikan jumlah_tiket: " . $e->getMessage());
+            Log::error("Error deleting transaksi ID {$transaksi->id}: " . $e->getMessage());
 
-            return redirect()->route('transaksi.index')->with('error', 'Gagal menghapus transaksi atau mengembalikan jumlah_tiket.');
+            return redirect()->route('transaksi.index')->with('error', 'Gagal menghapus transaksi');
         }
     }
 
+    /**
+     * Restore the specified trashed resource.
+     */
+    public function restore(int $id): RedirectResponse
+    {
+        try {
+            $transaksi = Transaksi::onlyTrashed()->findOrFail($id);
+
+            // Deduct tickets from event when restoring
+            if ($transaksi->event) {
+                $transaksi->event->decrement('jumlah_tiket', $transaksi->jumlah_tiket);
+            }
+
+            $transaksi->restore();
+
+            Log::info('Transaction restored', [
+                'transaksi_id' => $transaksi->id,
+                'invoice' => $transaksi->invoice,
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('transaksi.trashed')->with('success', 'Transaksi berhasil dipulihkan');
+        } catch (\Exception $e) {
+            Log::error("Error restoring transaksi ID {$id}: " . $e->getMessage());
+
+            return redirect()->route('transaksi.trashed')->with('error', 'Gagal memulihkan transaksi');
+        }
+    }
+
+    /**
+     * Permanently delete the specified trashed resource.
+     */
+    public function forceDelete(int $id): RedirectResponse
+    {
+        try {
+            $transaksi = Transaksi::onlyTrashed()->findOrFail($id);
+            $invoice = $transaksi->invoice;
+
+            // Detach volunteers before permanent deletion
+            $transaksi->volunteers()->detach();
+
+            $transaksi->forceDelete();
+
+            Log::warning('Transaction permanently deleted', [
+                'transaksi_id' => $id,
+                'invoice' => $invoice,
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->route('transaksi.trashed')->with('success', 'Transaksi berhasil dihapus permanen');
+        } catch (\Exception $e) {
+            Log::error("Error force deleting transaksi ID {$id}: " . $e->getMessage());
+
+            return redirect()->route('transaksi.trashed')->with('error', 'Gagal menghapus transaksi permanen');
+        }
+    }
+
+    /**
+     * Export transactions to Excel.
+     */
     public function export(Request $request)
     {
-        $tanggal_awal = $request->tanggal_awal;
-        $tanggal_akhir = $request->tanggal_akhir;
-        $id_event = $request->id_event;
-        $status_pembayaran = $request->status_pembayaran;
-        $payment_id = $request->payment_id;
-        
-        $data = Transaksi::select(
-                            'transaksis.id',
-                            'transaksis.id_event', 
-                            'transaksis.invoice',
-                            'events.name as name_event',
-                            'transaksis.invoice',
-                            'transaksis.name',
-                            'transaksis.email',
-                            'transaksis.telepon',
-                            'transaksis.status_pembayaran',
-                            'transaksis.tanggal_register',
-                            'transaksis.tanggal_pembayaran',
-                            'payments.name as name_payment',
-                            'transaksis.created_at'
-                        )
-                        ->whereNull('transaksis.deleted_at')
-                        ->leftJoin('payments', 'transaksis.payment_id', '=', 'payments.id')
-                        ->leftJoin('events', 'transaksis.id_event', '=', 'events.id')
-                        ->orderBy('transaksis.created_at', 'desc')
-                        ->when($tanggal_awal && $tanggal_akhir, function ($query) use ($tanggal_awal, $tanggal_akhir) {
-                            return $query->whereDate('transaksis.created_at', '>=', $tanggal_awal)
-                                        ->whereDate('transaksis.created_at', '<=', $tanggal_akhir);
-                        })
-                        ->when($tanggal_awal && !$tanggal_akhir, function ($query) use ($tanggal_awal) {
-                            return $query->whereDate('transaksis.created_at', $tanggal_awal);
-                        })
-                        ->when($id_event, function ($query) use ($id_event) {
-                            return $query->where('transaksis.id_event', $id_event);
-                        })
-                        ->when($status_pembayaran, function ($query) use ($status_pembayaran) {
-                            return $query->where('status_pembayaran', $status_pembayaran);
-                        })
-                        ->when($payment_id, function ($query) use ($payment_id) {
-                            return $query->where('transaksis.payment_id', $payment_id);
-                        })
-                    ->get();
-                    
-            // Convert tanggal di buat
-            $formattedTransaksi = $data->map(function ($data) {
-                return [
-                    'id' => $data->id,
-                    'id_event' => $data->id_event,
-                    'event' => $data->name_event,
-                    'invoice' => $data->invoice,
-                    'name' => $data->name,
-                    'email' => $data->email,
-                    'telepon' => $data->telepon,
-                    'status_pembayaran' =>$data->status_pembayaran,
-                    'tanggal_register' =>Carbon::parse($data->tanggal_register)->format('d-m-y h:i A'),
-                    'tanggal_pembayaran' =>Carbon::parse($data->tanggal_pembayaran)->format('d-m-y h:i A'),
-                    'payment_id' => $data->name_payment,
-                    'created_at' => Carbon::parse($data->created_at)->format('d-m-Y h:i A'),
-                ];
-            });
+        $data = Transaksi::with(['event:id,name', 'payment:id,name'])
+            ->orderByDesc('created_at')
+            ->when($request->tanggal_awal && $request->tanggal_akhir, fn($q) => 
+                $q->whereDate('created_at', '>=', $request->tanggal_awal)
+                  ->whereDate('created_at', '<=', $request->tanggal_akhir)
+            )
+            ->when($request->tanggal_awal && !$request->tanggal_akhir, fn($q) => 
+                $q->whereDate('created_at', $request->tanggal_awal)
+            )
+            ->when($request->id_event, fn($q) => 
+                $q->where('id_event', $request->id_event)
+            )
+            ->when($request->status_pembayaran, fn($q) => 
+                $q->where('status_pembayaran', $request->status_pembayaran)
+            )
+            ->when($request->id_payment, fn($q) => 
+                $q->where('id_payment', $request->id_payment)
+            )
+            ->get();
+
+        $formattedTransaksi = $data->map(fn($item) => [
+            'id' => $item->id,
+            'id_event' => $item->id_event,
+            'event' => $item->event?->name,
+            'invoice' => $item->invoice,
+            'name' => $item->name,
+            'email' => $item->email,
+            'telepon' => $item->telepon,
+            'status_pembayaran' => $item->status_pembayaran,
+            'tanggal_register' => $item->tanggal_register?->format('d-m-y h:i A'),
+            'tanggal_pembayaran' => $item->tanggal_pembayaran?->format('d-m-y h:i A'),
+            'payment' => $item->payment?->name,
+            'created_at' => $item->created_at->format('d-m-Y h:i A'),
+        ]);
+
+        Log::info('Transaction export requested', [
+            'total_records' => $formattedTransaksi->count(),
+            'user_id' => auth()->id(),
+            'filters' => $request->only(['tanggal_awal', 'tanggal_akhir', 'id_event', 'status_pembayaran', 'id_payment']),
+        ]);
 
         return Excel::download(new ExportTransaksi($formattedTransaksi), 'Transaksi.xlsx');
     }
 
-    public function filter(Request $request)
+    /**
+     * Filter transactions.
+     */
+    public function filter(Request $request): View
     {
-        $tanggal_awal = $request->tanggal_awal;
-        $tanggal_akhir = $request->tanggal_akhir;
-        $id_event =  $request->id_event;
-        $status_pembayaran = $request->status_pembayaran;
-        $payment_id = $request->payment_id;
-
         $title = 'Filter Transaksi';
-        $payment = Payment::get();
-        $data = Transaksi::select('transaksis.*', 'events.name as name_event', 'payments.name as name_payment')
-                        ->whereNull('transaksis.deleted_at')
-                        ->orderBy('transaksis.created_at', 'desc')
-                        ->leftJoin('events', 'transaksis.id_event', '=', 'events.id')
-                        ->leftJoin('payments', 'transaksis.payment', '=', 'payments.id')
-                        ->when($tanggal_awal && $tanggal_akhir, function ($query) use ($tanggal_awal, $tanggal_akhir) {
-                            return $query->whereDate('transaksis.created_at', '>=', $tanggal_awal)
-                                        ->whereDate('transaksis.created_at', '<=', $tanggal_akhir);
-                        })
-                        ->when($tanggal_awal && !$tanggal_akhir, function ($query) use ($tanggal_awal) {
-                            return $query->whereDate('transaksis.created_at', $tanggal_awal);
-                        })
-                        ->when($id_event, function ($query) use ($id_event) {
-                            return $query->where('transaksis.id_event', $id_event);
-                        })
-                        ->when($status_pembayaran, function ($query) use ($status_pembayaran) {
-                            return $query->where('status_pembayaran', $status_pembayaran);
-                        })
-                        ->when($payment_id, function ($query) use ($payment_id) {
-                            return $query->where('transaksis.payment', $payment_id);
-                        })
-                        ->paginate(5);
-                        
+        $payment = Payment::select(['id', 'name'])->get();
+
+        $data = Transaksi::with(['event:id,name', 'payment:id,name'])
+            ->orderByDesc('created_at')
+            ->when($request->tanggal_awal && $request->tanggal_akhir, fn($q) => 
+                $q->whereDate('created_at', '>=', $request->tanggal_awal)
+                  ->whereDate('created_at', '<=', $request->tanggal_akhir)
+            )
+            ->when($request->tanggal_awal && !$request->tanggal_akhir, fn($q) => 
+                $q->whereDate('created_at', $request->tanggal_awal)
+            )
+            ->when($request->id_event, fn($q) => 
+                $q->where('id_event', $request->id_event)
+            )
+            ->when($request->status_pembayaran, fn($q) => 
+                $q->where('status_pembayaran', $request->status_pembayaran)
+            )
+            ->when($request->id_payment, fn($q) => 
+                $q->where('id_payment', $request->id_payment)
+            )
+            ->paginate(5);
+
         return view('admin.transaksi.index', compact('title', 'data', 'payment'));
     }
 
-    public function search(Request $request)
+    /**
+     * Search transactions.
+     */
+    public function search(Request $request): View
     {
-        $search = $request->search;
-
         $title = 'Search Transaksi';
-        
-        $payment = Payment::get();
+        $payment = Payment::select(['id', 'name'])->get();
 
-        $query = Transaksi::select('transaksis.*', 'events.name as name_event', 'payments.name as name_payment')
-                        ->whereNull('transaksis.deleted_at')
-                        ->orderBy('transaksis.created_at', 'desc')
-                        ->leftJoin('events', 'transaksis.id_event', '=', 'events.id')
-                        ->leftJoin('payments', 'transaksis.id_payment', '=', 'payments.id');
-
-                        if ($search) {
-                            $query->where(function ($q) use ($search){
-                                $q->where('transaksis.id', 'like', '%' . $search . '%')
-                                ->orWhere('transaksis.invoice', 'like', '%' . $search . '%')
-                                ->orWhere('transaksis.name', 'like', '%' . $search . '%')
-                                ->orWhere('transaksis.telepon', 'like', '%' . $search . '%')
-                                ->orWhere('transaksis.email', 'like', '%' . $search . '%')
-                                ->orWhere('events.name', 'like', '%' . $search . '%');
-                            });
-                        }
-
-        $data =  $query->paginate(5);
+        $data = Transaksi::with(['event:id,name', 'payment:id,name'])
+            ->orderByDesc('created_at')
+            ->when($request->search, fn($q) => 
+                $q->where(fn($query) => 
+                    $query->where('id', 'like', '%' . $request->search . '%')
+                          ->orWhere('invoice', 'like', '%' . $request->search . '%')
+                          ->orWhere('name', 'like', '%' . $request->search . '%')
+                          ->orWhere('telepon', 'like', '%' . $request->search . '%')
+                          ->orWhere('email', 'like', '%' . $request->search . '%')
+                          ->orWhereHas('event', fn($eq) => 
+                              $eq->where('name', 'like', '%' . $request->search . '%')
+                          )
+                )
+            )
+            ->paginate(5);
 
         return view('admin.transaksi.index', compact('title', 'data', 'payment'));
     }
 
-    public function update_status(Request $request)
+    /**
+     * Update payment status.
+     */
+    public function updateStatus(Request $request): JsonResponse
     {
-        $id = $request->id;
+        $transaksi = Transaksi::with('volunteers')->find($request->id);
 
-        $transaksi = Transaksi::find($id);
-
-        $datas = DB::table('transaksi_volunteers')
-            ->join('volunteers', 'transaksi_volunteers.id_volunteer', '=', 'volunteers.id')
-            ->where('transaksi_volunteers.id_transaksi', $id)
-            ->select('volunteers.email AS volunteer_email')
-            ->get();
-
-
-        foreach ($datas as $data) {
-            Mail::to($data->volunteer_email)->send(new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/$transaksi->invoice"));
-        }
-        // Mail::to($transaksi->email)->send(new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/$transaksi->invoice"));
-   
-        if ($transaksi) {
-            $data = [
-                'status_pembayaran' => 'Success',
-                'tanggal_pembayaran' => now(),
-            ];
-
-            $transaksi->update($data);
-
-            return response()->json(['message' => 'Status berhasil diperbarui!'], 200);
+        if (!$transaksi) {
+            return response()->json(['message' => 'Item tidak ditemukan!'], 404);
         }
 
-        return response()->json(['message' => 'Item tidak ditemukan!'], 404);
+        $newStatus = $request->input('status', 'Success');
+        $oldStatus = $transaksi->status_pembayaran;
+
+        if ($newStatus === 'Success') {
+            // Check if there are volunteers to send emails to
+            if ($transaksi->volunteers->isEmpty()) {
+                return response()->json(['message' => 'Tidak ada volunteer yang terdaftar untuk transaksi ini!'], 400);
+            }
+
+            $failedEmails = [];
+            $sentEmails = [];
+
+            // Use database transaction to ensure atomicity
+            DB::beginTransaction();
+
+            try {
+                // Attempt to send email to all volunteers
+                foreach ($transaksi->volunteers as $volunteer) {
+                    try {
+                        Mail::to($volunteer->email)->send(
+                            new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/{$transaksi->invoice}")
+                        );
+                        
+                        $sentEmails[] = $volunteer->email;
+                        
+                        Log::info('Ticket email sent', [
+                            'invoice' => $transaksi->invoice,
+                            'volunteer_email' => $volunteer->email,
+                            'user_id' => auth()->id(),
+                        ]);
+                    } catch (\Exception $emailException) {
+                        $failedEmails[] = $volunteer->email;
+                        
+                        Log::error('Failed to send ticket email', [
+                            'invoice' => $transaksi->invoice,
+                            'volunteer_email' => $volunteer->email,
+                            'error' => $emailException->getMessage(),
+                            'user_id' => auth()->id(),
+                        ]);
+                    }
+                }
+
+                // If any email failed, rollback and return error
+                if (!empty($failedEmails)) {
+                    DB::rollBack();
+                    
+                    Log::warning('Transaction status update aborted due to email failures', [
+                        'transaksi_id' => $transaksi->id,
+                        'invoice' => $transaksi->invoice,
+                        'failed_emails' => $failedEmails,
+                        'sent_emails' => $sentEmails,
+                        'user_id' => auth()->id(),
+                    ]);
+
+                    return response()->json([
+                        'message' => 'Gagal mengirim email ke: ' . implode(', ', $failedEmails) . '. Status pembayaran tidak diperbarui.',
+                        'failed_emails' => $failedEmails,
+                        'sent_emails' => $sentEmails,
+                    ], 500);
+                }
+
+                // All emails sent successfully, now update status
+                $transaksi->update([
+                    'status_pembayaran' => 'Success',
+                    'tanggal_pembayaran' => now(),
+                ]);
+
+                // Re-deduct tickets if status changed FROM Failed to Success
+                if ($oldStatus === 'Failed') {
+                    if ($transaksi->event) {
+                        $transaksi->event->decrement('jumlah_tiket', $transaksi->jumlah_tiket);
+                    }
+                }
+
+                DB::commit();
+
+                Log::info('Transaction status updated to Success', [
+                    'transaksi_id' => $transaksi->id,
+                    'invoice' => $transaksi->invoice,
+                    'sent_emails' => $sentEmails,
+                    'user_id' => auth()->id(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Status berhasil diperbarui! Email terkirim ke ' . count($sentEmails) . ' volunteer.',
+                    'sent_emails' => $sentEmails,
+                    'tanggal_pembayaran' => now()->format('Y-m-d H:i:s'),
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                Log::error('Error updating transaction status', [
+                    'transaksi_id' => $transaksi->id,
+                    'error' => $e->getMessage(),
+                    'user_id' => auth()->id(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Terjadi kesalahan saat memproses transaksi: ' . $e->getMessage(),
+                ], 500);
+            }
+        } else {
+            // Update status to Pending or Failed
+            try {
+                $transaksi->update([
+                    'status_pembayaran' => $newStatus,
+                    'tanggal_pembayaran' => null,
+                ]);
+
+                // Return tickets if status changed to Failed
+                if ($newStatus === 'Failed' && $oldStatus !== 'Failed') {
+                    if ($transaksi->event) {
+                        $transaksi->event->increment('jumlah_tiket', $transaksi->jumlah_tiket);
+                    }
+                }
+
+                Log::info("Transaction status updated to {$newStatus}", [
+                    'transaksi_id' => $transaksi->id,
+                    'invoice' => $transaksi->invoice,
+                    'user_id' => auth()->id(),
+                ]);
+
+                return response()->json([
+                    'message' => "Status berhasil diperbarui menjadi {$newStatus}!",
+                    'tanggal_pembayaran' => null,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error updating transaction status', [
+                    'transaksi_id' => $transaksi->id,
+                    'error' => $e->getMessage(),
+                    'user_id' => auth()->id(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Terjadi kesalahan saat memperbarui status: ' . $e->getMessage(),
+                ], 500);
+            }
+        }
     }
-
 }

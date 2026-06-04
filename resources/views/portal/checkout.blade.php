@@ -1,4 +1,4 @@
-@extends('component.layout.portal')
+@extends('components.layout.portal')
 
 @section('content')
     <header id="header" class="header d-flex align-items-center fixed-top">
@@ -177,7 +177,7 @@
 
             <div class="container" data-aos="fade-up" data-aos-delay="100">
 
-                <form action="{{ route('transaksi.post', ['id' => $data->id]) }}" method="POST"
+                <form action="{{ route('transaksi.post', ['slug' => $data->slug]) }}" method="POST"
                     onsubmit="return validatePayment()">
                     @csrf
                     <div class="row gy-4">
@@ -236,14 +236,37 @@
                                     </div>
 
                                 </div>
+                                <div class="container mt-4">
+                                    <h3 class="mb-3">Kode Voucher</h3>
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" id="voucher_code"
+                                            placeholder="Masukkan kode voucher (opsional)">
+                                        <button class="btn text-white" style="background-color: #5a2d67" type="button"
+                                            id="apply-voucher-btn">
+                                            Terapkan
+                                        </button>
+                                    </div>
+                                    <input type="hidden" name="voucher_code" id="voucher_code_input" value="">
+                                    <input type="hidden" name="discount_amount" id="discount_amount_input" value="0">
+                                    <div id="voucher-message" class="mb-2" style="display: none;">
+                                        <!-- Voucher success/error message will appear here -->
+                                    </div>
+                                    <div id="discount-info" class="alert alert-success" style="display: none;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>Diskon Voucher</span>
+                                            <strong id="discount-display">-Rp 0</strong>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="container mt-5">
                                     <h3 class="mb-4">Metode Pembayaran</h3>
                                     <div class="list-group">
-                                        @foreach ($payment as $item)
+                                        @foreach ($payment as $index => $item)
                                             <label
                                                 class="list-group-item d-flex justify-content-between align-items-center">
                                                 <input type="radio" name="payment" value="{{ $item->id }}"
-                                                    class="form-check-input mx-3">
+                                                    class="form-check-input mx-3"
+                                                    {{ $index === 0 || stripos($item->name, 'qris') !== false ? 'checked' : '' }}>
                                                 <div class="d-flex justify-content-end align-items-center flex-grow-1">
                                                     <img src="{{ asset($item->image) }}" alt="{{ $item->name }}"
                                                         class="me-2" style="width: 110px; height: 40px;">
@@ -359,7 +382,7 @@
         </section><!-- /Portfolio Details Section -->
 
     </main>
-    @include('component.layout.footer')
+    @include('components.layout.footer')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // JavaScript untuk menangani jumlah
@@ -377,25 +400,34 @@
             <div class="card mb-3 p-3" style="border: 1px solid #dee2e6; border-radius: 8px;" id="form-tiket-${index}">
                 <h5 class="mb-3" style="color: #5a2d67; font-weight: bold;">Data Volunteer ${index}</h5>
                 <div class="form-group py-2">
-                    <label for="name_${index}">Nama Lengkap</label>
+                    <label for="name_${index}">Nama Lengkap <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="name_${index}" name="pengunjung[${arrayIndex}][name]"
-                        placeholder="Masukan Nama Anda" required>
+                        placeholder="Masukan Nama Anda" required minlength="3" maxlength="100"
+                        pattern="[A-Za-z\\s]+" title="Nama hanya boleh berisi huruf dan spasi">
+                    <small class="text-muted">Minimal 3 karakter, hanya huruf dan spasi</small>
                 </div>
                 <div class="form-group py-2">
-                    <label for="telepon_${index}">Nomor Ponsel</label>
+                    <label for="telepon_${index}">Nomor Ponsel <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <span class="input-group-text" id="basic-addon-${index}">+62</span>
                         </div>
-                        <input type="text" class="form-control" id="telepon_${index}" name="pengunjung[${arrayIndex}][telepon]"
-                            placeholder="Nomor Ponsel" aria-label="Nomor Ponsel"
-                            aria-describedby="basic-addon-${index}" required>
+                        <input type="tel" class="form-control" id="telepon_${index}" name="pengunjung[${arrayIndex}][telepon]"
+                            placeholder="8123456789" aria-label="Nomor Ponsel"
+                            aria-describedby="basic-addon-${index}" required
+                            pattern="[0-9]{9,13}" minlength="9" maxlength="13"
+                            title="Nomor telepon harus 9-13 digit angka (tanpa +62)"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     </div>
+                    <small class="text-muted">Contoh: 8123456789 (tanpa 0 di depan)</small>
                 </div>
                 <div class="form-group py-2 mb-2">
-                    <label for="email_${index}">Email</label>
+                    <label for="email_${index}">Email <span class="text-danger">*</span></label>
                     <input type="email" class="form-control" id="email_${index}" name="pengunjung[${arrayIndex}][email]"
-                        placeholder="E-tiket akan dikirim ke email kamu." required>
+                        placeholder="contoh@email.com" required
+                        pattern="[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}"
+                        title="Masukkan alamat email yang valid">
+                    <small class="text-muted">E-tiket akan dikirim ke email ini</small>
                 </div>
             </div>
         `;
@@ -516,5 +548,139 @@
                 checkbox.style.borderColor = '';
             }
         }
+
+        // Voucher functionality
+        let discountPerTicket = 0; // Diskon per tiket
+        const eventId = @json($data->id);
+
+        document.getElementById('apply-voucher-btn').addEventListener('click', async function() {
+            const voucherCode = document.getElementById('voucher_code').value.trim();
+            const messageDiv = document.getElementById('voucher-message');
+            const discountInfo = document.getElementById('discount-info');
+            const discountDisplay = document.getElementById('discount-display');
+
+            if (!voucherCode) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Kode Voucher Kosong',
+                    text: 'Masukkan kode voucher terlebih dahulu'
+                });
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML =
+            '<span class="spinner-border spinner-border-sm" role="status"></span> Memproses...';
+
+            try {
+                const response = await fetch('/api/voucher/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                            'content')
+                    },
+                    body: JSON.stringify({
+                        code: voucherCode,
+                        event_id: eventId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Apply discount per ticket
+                    discountPerTicket = result.discount_per_ticket;
+                    document.getElementById('voucher_code_input').value = voucherCode;
+                    document.getElementById('discount_amount_input').value = discountPerTicket;
+
+                    // Calculate total discount based on current ticket count
+                    const totalDiscount = discountPerTicket * counter;
+
+                    // Show success - hide message div since we use SweetAlert
+                    messageDiv.style.display = 'none';
+
+                    // Show discount info
+                    discountDisplay.textContent = `-Rp ${totalDiscount.toLocaleString('id-ID')}`;
+                    discountInfo.style.display = 'block';
+
+                    // Disable input after success
+                    document.getElementById('voucher_code').disabled = true;
+                    this.textContent = 'Diterapkan ✓';
+                    this.disabled = true;
+                    this.style.backgroundColor = '#28a745';
+
+                    // Update total price with discount
+                    updateTotalPriceWithDiscount();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Voucher Berhasil!',
+                        text: result.message
+                    });
+                } else {
+                    discountInfo.style.display = 'none';
+                    discountPerTicket = 0;
+                    document.getElementById('discount_amount_input').value = 0;
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Voucher Gagal',
+                        text: result.message
+                    });
+
+                    this.disabled = false;
+                    this.textContent = 'Terapkan';
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Terjadi Kesalahan',
+                    text: 'Gagal memvalidasi voucher. Coba lagi.'
+                });
+                this.disabled = false;
+                this.textContent = 'Terapkan';
+            }
+        });
+
+        function updateTotalPriceWithDiscount() {
+            let totalPrice = counter * pricePerItem;
+            let totalDiscount = discountPerTicket * counter; // Diskon = diskon per tiket * jumlah tiket
+            let finalPrice = Math.max(0, totalPrice - totalDiscount);
+
+            document.getElementById('total-price-input').value = finalPrice;
+            document.getElementById('total-price-display').innerText = `Rp ${finalPrice.toLocaleString('id-ID')}`;
+
+            // Update discount display
+            if (discountPerTicket > 0) {
+                document.getElementById('discount-display').textContent = `-Rp ${totalDiscount.toLocaleString('id-ID')}`;
+                document.getElementById('total-price-display').innerHTML =
+                    `<span class="text-decoration-line-through text-muted me-2">Rp ${totalPrice.toLocaleString('id-ID')}</span>` +
+                    `<span class="text-success fw-bold">Rp ${finalPrice.toLocaleString('id-ID')}</span>`;
+            }
+        }
+
+        // Override updateTotalPriceAndCounter to include discount
+        const originalUpdateFunction = updateTotalPriceAndCounter;
+        updateTotalPriceAndCounter = function() {
+            const totalPrice = counter * pricePerItem;
+            const totalDiscount = discountPerTicket * counter; // Diskon = diskon per tiket * jumlah tiket
+            const finalPrice = Math.max(0, totalPrice - totalDiscount);
+
+            document.getElementById('total-price-input').value = finalPrice;
+
+            if (discountPerTicket > 0) {
+                document.getElementById('discount-display').textContent =
+                `-Rp ${totalDiscount.toLocaleString('id-ID')}`;
+                document.getElementById('total-price-display').innerHTML =
+                    `<span class="text-decoration-line-through text-muted me-2">Rp ${totalPrice.toLocaleString('id-ID')}</span>` +
+                    `<span class="text-success fw-bold">Rp ${finalPrice.toLocaleString('id-ID')}</span>`;
+            } else {
+                document.getElementById('total-price-display').innerText = `Rp ${totalPrice.toLocaleString('id-ID')}`;
+            }
+
+            counterDisplay.innerText = counter;
+            updateFormDataDiri();
+        };
     </script>
 @endsection

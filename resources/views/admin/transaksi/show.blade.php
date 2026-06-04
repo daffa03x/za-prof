@@ -1,4 +1,4 @@
-@extends('component.layout.app')
+@extends('components.layout.app')
 
 @section('content')
     <div class="container mt-4">
@@ -45,55 +45,46 @@
                             <div class="d-flex justify-content-between align-items-stretch">
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Nama Lengkap</strong></p>
-                                    <p>{{ $data->name }}</p>
+                                    <p>{{ $transaksi->name }}</p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Email</strong></p>
-                                    <p>{{ $data->email }}</p>
+                                    <p>{{ $transaksi->email }}</p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Telepon</strong></p>
-                                    <p>{{ $data->telepon }}</p>
+                                    <p>{{ $transaksi->telepon }}</p>
                                 </div>
                             </div>
                         </div>
-                        {{-- 
-                        <div class="d-flex flex-row bd-highlight mb-3">
-                            @if ($data->jenis_kelamin === 'P')
-                                <div class="p-2 bd-highlight"><strong>Jenis Kelamin:</strong> Laki - Laki,</div>
-                            @else
-                                <div class="p-2 bd-highlight"><strong>Jenis Kelamin:</strong> Perempuan,</div>
-                            @endif
-                            <div class="p-2 bd-highlight"><strong>Tanggal Lahir:</strong> {{ $data->tanggal_lahir }}</div>
-                        </div> --}}
 
-                        <p><strong class="h5 mt-4 pt-2">Detail pembayaran.</strong></p>
+                        <p class="mt-3"><strong class="h5 mt-4 pt-2">Detail pembayaran.</strong></p>
                         <div class="border border-secondary rounded pt-1 mb-4">
                             <div class="d-flex justify-content-between align-items-stretch">
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Waktu Registrasi</strong></p>
-                                    <p>{{ $data->tanggal_register }}</p>
+                                    <p>{{ $transaksi->tanggal_register }}</p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Waktu Pembayaran</strong></p>
                                     <p>
-                                        @if ($data->tanggal_pembayaran === null)
+                                        @if ($transaksi->tanggal_pembayaran === null)
                                             Belum Bayar
                                         @else
-                                            {{ $data->tanggal_pembayaran }}
+                                            {{ $transaksi->tanggal_pembayaran }}
                                         @endif
                                     </p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Metode Pembayaran</strong></p>
-                                    <p>{{ $data->payment->name }}</p>
+                                    <p>{{ $transaksi->payment->name }}</p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Status Pembayaran</strong></p>
                                     <p>
-                                        @if ($data->status_pembayaran === 'Success')
+                                        @if ($transaksi->status_pembayaran === 'Success')
                                             <span class="badge bg-success">Success</span>
-                                        @elseif($data->status_pembayaran === 'Failed')
+                                        @elseif($transaksi->status_pembayaran === 'Failed')
                                             <span class="badge bg-danger">Failed</span>
                                         @else
                                             <span class="badge bg-warning">Pending</span>
@@ -103,33 +94,67 @@
                             </div>
                         </div>
 
+                        <p class="mt-3">
+                            <strong class="h5">Detail Volunteer</strong>
+                        </p>
+
+                        @if ($transaksi->volunteers->count())
+                            @foreach ($transaksi->volunteers as $volunteer)
+                                <div class="border border-secondary rounded mb-3">
+                                    <div class="d-flex justify-content-between align-items-stretch">
+                                        <div class="p-3 w-100">
+                                            <p><strong>Nama</strong></p>
+                                            <p>{{ $volunteer->name }}</p>
+                                        </div>
+                                        <div class="p-3 w-100">
+                                            <p><strong>Email</strong></p>
+                                            <p>{{ $volunteer->email }}</p>
+                                        </div>
+                                        <div class="p-3 w-100">
+                                            <p><strong>Telepon</strong></p>
+                                            <p>{{ $volunteer->telepon }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <p class="text-muted">Tidak ada volunteer</p>
+                        @endif
+
+                        <p class="mt-3"><strong class="h5 mt-4 pt-2">Detail event.</strong></p>
                         <div class="border border-secondary rounded pt-1 mb-4">
                             <div class="d-flex justify-content-between align-items-stretch">
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
-                                    <p><strong>No</strong></p>
-                                    <p>{{ $data->name }}</p>
-                                </div>
-                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Event</strong></p>
-                                    <p>{{ $data->event->name }}</p>
-                                </div>
-                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
-                                    <p><strong>Judul</strong></p>
-                                    <p>Isi</p>
+                                    <p>{{ $transaksi->event->name }}</p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Jumlah</strong></p>
-                                    <p>{{ $data->jumlah_tiket }}</p>
+                                    <p>{{ $transaksi->jumlah_tiket }}</p>
+                                </div>
+                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
+                                    <p><strong>Kode Voucher</strong></p>
+                                    <p>{{ $transaksi->voucher->kode ?? '-' }}</p>
+                                </div>
+                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
+                                    <p><strong>Potongan Harga</strong></p>
+                                    <p>
+                                        @isset($transaksi->voucher)
+                                            @rupiah($transaksi->voucher->nilai_diskon)
+                                        @else
+                                            -
+                                        @endisset
+                                    </p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Total</strong></p>
-                                    <p>@rupiah($data->total_pembayaran)</p>
+                                    <p>@rupiah($transaksi->total_pembayaran)</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-flex flex-row-reverse bd-highlight justify-items-center">
-                            <div class="p-2 bd-highlight h4">@rupiah($data->total_pembayaran)</div>
+                            <div class="p-2 bd-highlight h4">@rupiah($transaksi->total_pembayaran)</div>
                             <div class="p-2 bd-highlight"><strong>Total Pembayaran</strong></div>
                         </div>
                     </div>
