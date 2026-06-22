@@ -7,8 +7,10 @@ use App\Models\Transaksi;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Volunteer;
+use App\Models\KodeVoucher;
 use App\Exports\ExportTransaksi;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
@@ -460,6 +462,33 @@ class TransaksiController extends Controller
                     'sent_emails' => $sentEmails,
                     'user_id' => auth()->id(),
                 ]);
+
+                // Redeem external voucher via chatkebaikan API jika voucher berasal dari API eksternal
+                if ($transaksi->id_voucher) {
+                    $voucher = KodeVoucher::find($transaksi->id_voucher);
+                    if ($voucher && $voucher->is_external) {
+                        try {
+                            $redeemResponse = Http::timeout(10)
+                                ->post('http://chatkebaikan.raihmimpi.id/api/dr/voucher/redeem', [
+                                    'kode' => $voucher->kode,
+                                ]);
+
+                            Log::info('External voucher redeem response', [
+                                'kode' => $voucher->kode,
+                                'status' => $redeemResponse->status(),
+                                'body' => $redeemResponse->json(),
+                                'invoice' => $transaksi->invoice,
+                            ]);
+                        } catch (\Exception $redeemException) {
+                            // Log tapi tidak gagalkan transaksi — pembayaran sudah dikonfirmasi
+                            Log::error('Failed to redeem external voucher', [
+                                'kode' => $voucher->kode,
+                                'invoice' => $transaksi->invoice,
+                                'error' => $redeemException->getMessage(),
+                            ]);
+                        }
+                    }
+                }
 
                 return response()->json([
                     'message' => 'Status berhasil diperbarui! Email terkirim ke ' . count($sentEmails) . ' volunteer.',

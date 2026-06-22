@@ -44,7 +44,14 @@
                             @forelse ($data as $item)
                                 <tr>
                                     <td>{{ $loop->iteration + ($data->currentPage() - 1) * $data->perPage() }}</td>
-                                    <td><code class="bg-light px-2 py-1 rounded">{{ $item->kode }}</code></td>
+                                    <td>
+                                        <code class="bg-light px-2 py-1 rounded">{{ $item->kode }}</code>
+                                        @if ($item->is_external)
+                                            <span class="badge bg-primary ms-1" title="Voucher dari API Eksternal">
+                                                <i class="fas fa-link"></i> External
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td>{{ $item->name_voucher }}</td>
                                     <td>{{ $item->event->name ?? '-' }}</td>
                                     <td>Rp {{ number_format($item->nilai_diskon, 0, ',', '.') }}</td>
