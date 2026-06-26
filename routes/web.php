@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MidtransController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -20,6 +21,11 @@ use App\Http\Controllers\VoucherController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+// Midtrans
+Route::get('/midtrans/finish/{invoice}', [MidtransController::class, 'finish'])->name('midtrans.finish');
+// Webhook POST /midtrans/notification — CSRF dikecualikan di VerifyCsrfToken
+Route::post('/midtrans/notification', [MidtransController::class, 'notification'])->name('midtrans.notification');
 
 // Portal
 Route::get('/', [PortalController::class, 'index'])->name('index');

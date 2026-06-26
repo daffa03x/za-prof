@@ -7,9 +7,11 @@ use App\Models\Payment;
 use App\Models\Transaksi;
 use App\Models\Volunteer;
 use App\Models\KodeVoucher;
+use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -78,7 +80,7 @@ class PortalController extends Controller
         
         // Cache payment methods for 30 minutes (rarely changes)
         $payment = Cache::remember('active_payment_methods', 1800, function () {
-            return Payment::select(['id', 'name', 'image', 'no_rek'])
+            return Payment::select(['id', 'name', 'image', 'no_rek', 'type'])
                 ->where('status', true)
                 ->orderBy('id')
                 ->get();
@@ -129,25 +131,26 @@ class PortalController extends Controller
             
             // Handle voucher if provided
             $voucherId = null;
+            $appliedVoucher = null;
             if ($request->voucher_code) {
-                $voucher = KodeVoucher::where('kode', $request->voucher_code)
+                $appliedVoucher = KodeVoucher::where('kode', $request->voucher_code)
                     ->where('id_event', $event->id)
                     ->where('status', true)
                     ->where('tanggal_kadaluarsa', '>=', now()->startOfDay())
                     ->first();
-                
-                if ($voucher) {
+
+                if ($appliedVoucher) {
                     // Calculate remaining quota
-                    $remainingQuota = $voucher->kuota - $voucher->digunakan;
-                    
+                    $remainingQuota = $appliedVoucher->kuota - $appliedVoucher->digunakan;
+
                     // Check if voucher has enough quota for all tickets
                     if ($remainingQuota < $request->jumlah_tiket) {
                         throw new \Exception("Kuota voucher tidak mencukupi. Tersisa {$remainingQuota} kuota, dibutuhkan {$request->jumlah_tiket}.");
                     }
-                    
-                    $voucherId = $voucher->id;
+
+                    $voucherId = $appliedVoucher->id;
                     // Increment voucher usage by ticket count
-                    $voucher->increment('digunakan', $request->jumlah_tiket);
+                    $appliedVoucher->increment('digunakan', $request->jumlah_tiket);
                 }
             }
 
@@ -191,16 +194,39 @@ class PortalController extends Controller
                 $transaksi->volunteers()->syncWithoutDetaching([$volunteer->id]);
             }
 
+            // Redeem voucher eksternal ke sistem chatkebaikan; gagal = rollback.
+            if ($appliedVoucher && $appliedVoucher->is_external) {
+                $this->redeemExternalVoucher($appliedVoucher, $transaksi);
+            }
+
+            // Generate Snap token jika metode pembayaran adalah Midtrans
+            $payment = Payment::find($request->payment);
+            if ($payment && $payment->type === 'midtrans') {
+                try {
+                    $midtransService = app(MidtransService::class);
+                    $transaksi->load('event');
+                    $snapToken = $midtransService->createSnapToken($transaksi);
+                    $transaksi->update(['snap_token' => $snapToken]);
+                } catch (\Exception $e) {
+                    // Snap token gagal dibuat: log dan lanjutkan (invoice tetap tampil, user bisa hubungi admin)
+                    Log::error('Gagal membuat Snap token Midtrans', [
+                        'invoice' => $transaksi->invoice,
+                        'error'   => $e->getMessage(),
+                    ]);
+                }
+            }
+
             DB::commit();
 
             Log::info('Transaction created via portal', [
-                'invoice' => $transaksi->invoice,
-                'event_id' => $event->id,
-                'event_name' => $event->name,
-                'total' => $request->price,
-                'ticket_count' => $request->jumlah_tiket,
+                'invoice'         => $transaksi->invoice,
+                'event_id'        => $event->id,
+                'event_name'      => $event->name,
+                'total'           => $request->price,
+                'ticket_count'    => $request->jumlah_tiket,
                 'voucher_applied' => $voucherId !== null,
-                'ip' => $request->ip(),
+                'payment_type'    => $payment?->type ?? 'unknown',
+                'ip'              => $request->ip(),
             ]);
 
             return redirect("/invoice/{$transaksi->invoice}")->with('success', 'Transaksi berhasil');
@@ -271,63 +297,185 @@ class PortalController extends Controller
     }
 
     /**
-     * Validate voucher code via API.
+     * Validate voucher code via API (checkout).
+     * Cek DB lokal dulu; jika tidak ada, validasi ke API eksternal lalu buat voucher.
      */
     public function validateVoucher(Request $request): JsonResponse
     {
         $request->validate([
             'code' => 'required|string',
             'event_id' => 'required|integer|exists:events,id',
+            'jumlah_tiket' => 'nullable|integer|min:1',
         ]);
 
-        $voucher = KodeVoucher::where('kode', $request->code)
+        $code = strtoupper(trim($request->code));
+        $jumlahTiket = (int) ($request->jumlah_tiket ?? 1);
+
+        $voucher = KodeVoucher::where('kode', $code)
             ->where('id_event', $request->event_id)
             ->where('status', true)
             ->first();
 
-        if (!$voucher) {
-            Log::warning('Invalid voucher code attempted', [
-                'code' => $request->code,
-                'event_id' => $request->event_id,
-                'ip' => $request->ip(),
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Kode voucher tidak valid atau tidak berlaku untuk event ini.'
-            ], 400);
+        if ($voucher) {
+            return $this->respondWithLocalVoucher($voucher);
         }
 
-        // Check if voucher is expired
+        return $this->validateExternalVoucher($code, (int) $request->event_id, $jumlahTiket);
+    }
+
+    /**
+     * Bangun response untuk voucher yang sudah ada di DB lokal (cek expiry & kuota).
+     */
+    private function respondWithLocalVoucher(KodeVoucher $voucher): JsonResponse
+    {
         if ($voucher->tanggal_kadaluarsa < now()->startOfDay()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kode voucher sudah kadaluarsa.'
+                'message' => 'Kode voucher sudah kadaluarsa.',
             ], 400);
         }
 
-        // Check if voucher has remaining quota
         if ($voucher->digunakan >= $voucher->kuota) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kuota voucher sudah habis.'
+                'message' => 'Kuota voucher sudah habis.',
             ], 400);
         }
 
         Log::info('Voucher validated successfully', [
             'voucher_id' => $voucher->id,
             'voucher_code' => $voucher->kode,
-            'event_id' => $request->event_id,
+            'event_id' => $voucher->id_event,
             'discount_per_ticket' => $voucher->nilai_diskon,
-            'ip' => $request->ip(),
+            'is_external' => (bool) $voucher->is_external,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => "Voucher '{$voucher->name_voucher}' berhasil diterapkan! Diskon Rp " . number_format($voucher->nilai_diskon, 0, ',', '.') . " per tiket",
+            'message' => "Voucher '{$voucher->name_voucher}' berhasil diterapkan! Diskon Rp "
+                . number_format($voucher->nilai_diskon, 0, ',', '.') . " per tiket",
             'discount_per_ticket' => $voucher->nilai_diskon,
             'voucher_id' => $voucher->id,
-            'voucher_name' => $voucher->name_voucher
+            'voucher_name' => $voucher->name_voucher,
+            'is_external' => (bool) $voucher->is_external,
+        ]);
+    }
+
+    /**
+     * Validasi kode ke API eksternal; jika valid buat voucher lokal (kuota=1).
+     */
+    private function validateExternalVoucher(string $code, int $eventId, int $jumlahTiket): JsonResponse
+    {
+        $event = Event::findOrFail($eventId);
+        $cfg = config('services.chatkebaikan');
+        $url = rtrim($cfg['base_url'], '/') . str_replace('{kode}', $code, $cfg['validate_path']);
+
+        try {
+            $response = Http::timeout($cfg['timeout'])->get($url);
+        } catch (\Throwable $e) {
+            Log::error('External voucher validate request failed', [
+                'kode' => $code,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghubungi sistem voucher eksternal. Coba lagi.',
+            ], 400);
+        }
+
+        if (!$response->successful()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghubungi sistem voucher eksternal. Coba lagi.',
+            ], 400);
+        }
+
+        $api = $response->json();
+
+        if (!($api['valid'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $api['reason'] ?? 'Kode voucher tidak valid di sistem eksternal.',
+            ], 400);
+        }
+
+        if ($jumlahTiket > 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Voucher ini hanya berlaku untuk 1 volunteer (1 tiket).',
+            ], 400);
+        }
+
+        $discountPercent = (int) ($api['discount_percent'] ?? 0);
+        $nilaiDiskon = (int) round($event->harga * $discountPercent / 100);
+
+        try {
+            $voucher = KodeVoucher::create([
+                'id_event' => $event->id,
+                'name_voucher' => $api['reward_name'] ?? $code,
+                'kode' => $code,
+                'nilai_diskon' => $nilaiDiskon,
+                'kuota' => 1,
+                'digunakan' => 0,
+                'tanggal_kadaluarsa' => Carbon::parse($api['berlaku_sampai'])->toDateString(),
+                'status' => true,
+                'is_external' => true,
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Race / dobel: kode sudah dibuat proses lain. Pakai yang sudah ada.
+            $existing = KodeVoucher::where('kode', $code)->where('id_event', $event->id)->first();
+            if (!$existing) {
+                throw $e;
+            }
+            return $this->respondWithLocalVoucher($existing);
+        }
+
+        Log::info('External voucher created at checkout', [
+            'voucher_id' => $voucher->id,
+            'kode' => $code,
+            'event_id' => $event->id,
+            'discount_percent' => $discountPercent,
+            'nilai_diskon' => $nilaiDiskon,
+        ]);
+
+        return $this->respondWithLocalVoucher($voucher);
+    }
+
+    /**
+     * Beri tahu API eksternal bahwa voucher sudah terpakai.
+     * Lempar exception bila gagal agar transaksi di-rollback.
+     */
+    private function redeemExternalVoucher(KodeVoucher $voucher, Transaksi $transaksi): void
+    {
+        $cfg = config('services.chatkebaikan');
+        $url = $cfg['redeem_url'] ?? '';
+
+        if (empty($url)) {
+            throw new \Exception('Endpoint redeem voucher eksternal belum dikonfigurasi.');
+        }
+
+        $method = strtoupper($cfg['redeem_method'] ?? 'POST');
+        $payload = [
+            'kode' => $voucher->kode,
+        ];
+
+        $response = Http::timeout($cfg['timeout'])
+            ->acceptJson()
+            ->withOptions(['allow_redirects' => ['strict' => true]]) // jaga POST tetap POST jika ada redirect 301/302
+            ->send($method, $url, ['json' => $payload]);
+
+        if (!$response->successful()) {
+            Log::error('External voucher redeem failed', [
+                'kode' => $voucher->kode,
+                'invoice' => $transaksi->invoice,
+                'status' => $response->status(),
+            ]);
+            throw new \Exception('Gagal redeem voucher eksternal (HTTP ' . $response->status() . ').');
+        }
+
+        Log::info('External voucher redeemed', [
+            'kode' => $voucher->kode,
+            'invoice' => $transaksi->invoice,
         ]);
     }
 }
