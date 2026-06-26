@@ -582,7 +582,8 @@
                     },
                     body: JSON.stringify({
                         code: voucherCode,
-                        event_id: eventId
+                        event_id: eventId,
+                        jumlah_tiket: counter
                     })
                 });
 
@@ -609,6 +610,15 @@
                     this.textContent = 'Diterapkan ✓';
                     this.disabled = true;
                     this.style.backgroundColor = '#28a745';
+
+                    // Voucher external hanya untuk 1 volunteer: kunci jumlah tiket ke 1.
+                    if (result.is_external) {
+                        counter = 1;
+                        jumlahTiketInput.value = 1;
+                        counterDisplay.innerText = 1;
+                        document.getElementById('increase-btn').disabled = true;
+                        document.getElementById('decrease-btn').disabled = true;
+                    }
 
                     // Update total price with discount
                     updateTotalPriceWithDiscount();

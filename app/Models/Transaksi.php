@@ -59,6 +59,7 @@ class Transaksi extends Model
         'tanggal_pembayaran',
         'id_payment',
         'id_voucher',
+        'snap_token',
     ];
 
     /**

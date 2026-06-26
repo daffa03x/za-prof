@@ -83,7 +83,7 @@ class EventController extends Controller
             $data = $request->validated();
 
             if ($request->hasFile('image')) {
-                $path = 'image/payment/' . date('Y-m');
+                $path = 'image/event/' . date('Y-m');
                 $data['image'] = $this->imageService->compress(
                     $request->file('image'),
                     $path
