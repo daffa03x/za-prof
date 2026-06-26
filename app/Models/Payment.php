@@ -33,6 +33,7 @@ class Payment extends Model
     protected $fillable = [
         'name',
         'no_rek',
+        'type',
         'image',
         'status',
     ];
