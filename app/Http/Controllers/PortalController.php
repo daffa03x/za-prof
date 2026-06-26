@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Transaksi;
 use App\Models\Volunteer;
 use App\Models\KodeVoucher;
+use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -79,7 +80,7 @@ class PortalController extends Controller
         
         // Cache payment methods for 30 minutes (rarely changes)
         $payment = Cache::remember('active_payment_methods', 1800, function () {
-            return Payment::select(['id', 'name', 'image', 'no_rek'])
+            return Payment::select(['id', 'name', 'image', 'no_rek', 'type'])
                 ->where('status', true)
                 ->orderBy('id')
                 ->get();
@@ -198,16 +199,34 @@ class PortalController extends Controller
                 $this->redeemExternalVoucher($appliedVoucher, $transaksi);
             }
 
+            // Generate Snap token jika metode pembayaran adalah Midtrans
+            $payment = Payment::find($request->payment);
+            if ($payment && $payment->type === 'midtrans') {
+                try {
+                    $midtransService = app(MidtransService::class);
+                    $transaksi->load('event');
+                    $snapToken = $midtransService->createSnapToken($transaksi);
+                    $transaksi->update(['snap_token' => $snapToken]);
+                } catch (\Exception $e) {
+                    // Snap token gagal dibuat: log dan lanjutkan (invoice tetap tampil, user bisa hubungi admin)
+                    Log::error('Gagal membuat Snap token Midtrans', [
+                        'invoice' => $transaksi->invoice,
+                        'error'   => $e->getMessage(),
+                    ]);
+                }
+            }
+
             DB::commit();
 
             Log::info('Transaction created via portal', [
-                'invoice' => $transaksi->invoice,
-                'event_id' => $event->id,
-                'event_name' => $event->name,
-                'total' => $request->price,
-                'ticket_count' => $request->jumlah_tiket,
+                'invoice'         => $transaksi->invoice,
+                'event_id'        => $event->id,
+                'event_name'      => $event->name,
+                'total'           => $request->price,
+                'ticket_count'    => $request->jumlah_tiket,
                 'voucher_applied' => $voucherId !== null,
-                'ip' => $request->ip(),
+                'payment_type'    => $payment?->type ?? 'unknown',
+                'ip'              => $request->ip(),
             ]);
 
             return redirect("/invoice/{$transaksi->invoice}")->with('success', 'Transaksi berhasil');
