@@ -57,17 +57,8 @@
                                 </div>
                             </div>
                         </div>
-                        {{-- 
-                        <div class="d-flex flex-row bd-highlight mb-3">
-                            @if ($transaksi->jenis_kelamin === 'P')
-                                <div class="p-2 bd-highlight"><strong>Jenis Kelamin:</strong> Laki - Laki,</div>
-                            @else
-                                <div class="p-2 bd-highlight"><strong>Jenis Kelamin:</strong> Perempuan,</div>
-                            @endif
-                            <div class="p-2 bd-highlight"><strong>Tanggal Lahir:</strong> {{ $transaksi->tanggal_lahir }}</div>
-                        </div> --}}
 
-                        <p><strong class="h5 mt-4 pt-2">Detail pembayaran.</strong></p>
+                        <p class="mt-3"><strong class="h5 mt-4 pt-2">Detail pembayaran.</strong></p>
                         <div class="border border-secondary rounded pt-1 mb-4">
                             <div class="d-flex justify-content-between align-items-stretch">
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
@@ -103,23 +94,57 @@
                             </div>
                         </div>
 
+                        <p class="mt-3">
+                            <strong class="h5">Detail Volunteer</strong>
+                        </p>
+
+                        @if ($transaksi->volunteers->count())
+                            @foreach ($transaksi->volunteers as $volunteer)
+                                <div class="border border-secondary rounded mb-3">
+                                    <div class="d-flex justify-content-between align-items-stretch">
+                                        <div class="p-3 w-100">
+                                            <p><strong>Nama</strong></p>
+                                            <p>{{ $volunteer->name }}</p>
+                                        </div>
+                                        <div class="p-3 w-100">
+                                            <p><strong>Email</strong></p>
+                                            <p>{{ $volunteer->email }}</p>
+                                        </div>
+                                        <div class="p-3 w-100">
+                                            <p><strong>Telepon</strong></p>
+                                            <p>{{ $volunteer->telepon }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <p class="text-muted">Tidak ada volunteer</p>
+                        @endif
+
+                        <p class="mt-3"><strong class="h5 mt-4 pt-2">Detail event.</strong></p>
                         <div class="border border-secondary rounded pt-1 mb-4">
                             <div class="d-flex justify-content-between align-items-stretch">
-                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
-                                    <p><strong>No</strong></p>
-                                    <p>{{ $transaksi->name }}</p>
-                                </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Event</strong></p>
                                     <p>{{ $transaksi->event->name }}</p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
-                                    <p><strong>Judul</strong></p>
-                                    <p>Isi</p>
-                                </div>
-                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Jumlah</strong></p>
                                     <p>{{ $transaksi->jumlah_tiket }}</p>
+                                </div>
+                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
+                                    <p><strong>Kode Voucher</strong></p>
+                                    <p>{{ $transaksi->voucher->kode ?? '-' }}</p>
+                                </div>
+                                <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
+                                    <p><strong>Potongan Harga</strong></p>
+                                    <p>
+                                        @isset($transaksi->voucher)
+                                            @rupiah($transaksi->voucher->nilai_diskon)
+                                        @else
+                                            -
+                                        @endisset
+                                    </p>
                                 </div>
                                 <div class="h-100 p-3 d-flex flex-column justify-content-center w-100">
                                     <p><strong>Total</strong></p>

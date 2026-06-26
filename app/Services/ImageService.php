@@ -7,11 +7,6 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 
-/**
- * Class ImageService
- *
- * Handles image compression and optimization for uploaded images.
- */
 class ImageService
 {
     /**
@@ -26,16 +21,24 @@ class ImageService
     protected int $thumbnailHeight = 300;
 
     /**
-     * The Image Manager instance.
+     * Image manager.
      */
     protected ImageManager $manager;
 
-    /**
-     * Create a new ImageService instance.
-     */
     public function __construct()
     {
         $this->manager = new ImageManager(new Driver());
+    }
+
+    /**
+     * Resolve public_html root path safely.
+     */
+    protected function publicRoot(string $path = ''): string
+    {
+        return rtrim(
+            base_path('public_html/' . ltrim($path, '/')),
+            '/'
+        );
     }
 
     /**
@@ -48,104 +51,93 @@ class ImageService
     }
 
     /**
-     * Set thumbnail dimensions.
+     * Set thumbnail size.
      */
     public function setThumbnailSize(int $width, int $height): self
     {
-        $this->thumbnailWidth = $width;
+        $this->thumbnailWidth  = $width;
         $this->thumbnailHeight = $height;
         return $this;
     }
 
     /**
-     * Compress and save an uploaded image.
+     * Compress image + create thumbnail.
      *
-     * @param UploadedFile $file The uploaded file
-     * @param string $directory The target directory (relative to public path)
-     * @param string|null $filename Custom filename (without extension)
-     * @return array{original: string, thumbnail: string} Paths to saved images
+     * @return array{original: string, thumbnail: string}
      */
-    public function compressAndSave(UploadedFile $file, string $directory, ?string $filename = null): array
-    {
-        // Generate filename if not provided
+    public function compressAndSave(
+        UploadedFile $file,
+        string $directory,
+        ?string $filename = null
+    ): array {
         $filename = $filename ?? date('Y-m-d_His') . '_' . uniqid();
-        
-        // Ensure directory exists
-        $fullPath = public_path($directory);
-        if (!File::isDirectory($fullPath)) {
-            File::makeDirectory($fullPath, 0755, true);
+
+        $fullDir = $this->publicRoot($directory);
+        if (!File::isDirectory($fullDir)) {
+            File::makeDirectory($fullDir, 0755, true);
         }
 
-        // Get original extension
         $extension = strtolower($file->getClientOriginalExtension());
         if (!in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
             $extension = 'jpg';
         }
 
-        // Read the image
         $image = $this->manager->read($file->getPathname());
 
-        // Save compressed original
-        $originalFilename = $filename . '.' . $extension;
-        $originalPath = $directory . '/' . $originalFilename;
-        
-        $image->toJpeg($this->quality)->save(public_path($originalPath));
+        // Original
+        $originalName = $filename . '.' . $extension;
+        $originalPath = $directory . '/' . $originalName;
 
-        // Create and save thumbnail
-        $thumbnailFilename = $filename . '_thumb.' . $extension;
-        $thumbnailPath = $directory . '/' . $thumbnailFilename;
+        $image->toJpeg($this->quality)
+              ->save($this->publicRoot($originalPath));
+
+        // Thumbnail
+        $thumbName = $filename . '_thumb.' . $extension;
+        $thumbPath = $directory . '/' . $thumbName;
 
         $image->cover($this->thumbnailWidth, $this->thumbnailHeight)
               ->toJpeg($this->quality)
-              ->save(public_path($thumbnailPath));
+              ->save($this->publicRoot($thumbPath));
 
         return [
-            'original' => $originalPath,
-            'thumbnail' => $thumbnailPath,
+            'original'  => $originalPath,
+            'thumbnail' => $thumbPath,
         ];
     }
 
     /**
-     * Compress a single image without creating thumbnail.
-     *
-     * @param UploadedFile $file The uploaded file
-     * @param string $directory The target directory (relative to public path)
-     * @param string|null $filename Custom filename (without extension)
-     * @return string Path to saved image
+     * Compress image only (no thumbnail).
      */
-    public function compress(UploadedFile $file, string $directory, ?string $filename = null): string
-    {
-        // Generate filename if not provided
+    public function compress(
+        UploadedFile $file,
+        string $directory,
+        ?string $filename = null
+    ): string {
         $filename = $filename ?? date('Y-m-d_His') . '_' . uniqid();
-        
-        // Ensure directory exists
-        $fullPath = public_path($directory);
-        if (!File::isDirectory($fullPath)) {
-            File::makeDirectory($fullPath, 0755, true);
+
+        $fullDir = $this->publicRoot($directory);
+        if (!File::isDirectory($fullDir)) {
+            File::makeDirectory($fullDir, 0755, true);
         }
 
-        // Get original extension
         $extension = strtolower($file->getClientOriginalExtension());
         if (!in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
             $extension = 'jpg';
         }
 
-        // Read and compress the image
         $image = $this->manager->read($file->getPathname());
 
-        // Save compressed image
-        $outputFilename = $filename . '.' . $extension;
-        $outputPath = $directory . '/' . $outputFilename;
-        
-        $image->toJpeg($this->quality)->save(public_path($outputPath));
+        $outputName = $filename . '.' . $extension;
+        $outputPath = $directory . '/' . $outputName;
+
+        $image->toJpeg($this->quality)
+              ->save($this->publicRoot($outputPath));
 
         return $outputPath;
     }
 
     /**
-     * Delete an image and its thumbnail if exists.
-     *
-     * @param string $path Path to the original image
+     * Delete image and thumbnail.
      */
     public function delete(string $path): void
     {
@@ -153,41 +145,40 @@ class ImageService
             return;
         }
 
-        // Delete original
-        $fullPath = public_path($path);
-        if (File::exists($fullPath)) {
-            File::delete($fullPath);
+        $original = $this->publicRoot($path);
+        if (File::exists($original)) {
+            File::delete($original);
         }
 
-        // Delete thumbnail
         $thumbnailPath = $this->getThumbnailPath($path);
-        $fullThumbnailPath = public_path($thumbnailPath);
-        if (File::exists($fullThumbnailPath)) {
-            File::delete($fullThumbnailPath);
+        $thumbnail = $this->publicRoot($thumbnailPath);
+
+        if (File::exists($thumbnail)) {
+            File::delete($thumbnail);
         }
     }
 
     /**
      * Get thumbnail path from original path.
-     *
-     * @param string $originalPath Original image path
-     * @return string Thumbnail path
      */
     public function getThumbnailPath(string $originalPath): string
     {
         $info = pathinfo($originalPath);
-        return $info['dirname'] . '/' . $info['filename'] . '_thumb.' . ($info['extension'] ?? 'jpg');
+
+        return $info['dirname']
+            . '/'
+            . $info['filename']
+            . '_thumb.'
+            . ($info['extension'] ?? 'jpg');
     }
 
     /**
-     * Check if a thumbnail exists for the given image.
-     *
-     * @param string $originalPath Original image path
-     * @return bool
+     * Check if thumbnail exists.
      */
     public function thumbnailExists(string $originalPath): bool
     {
-        $thumbnailPath = $this->getThumbnailPath($originalPath);
-        return File::exists(public_path($thumbnailPath));
+        return File::exists(
+            $this->publicRoot($this->getThumbnailPath($originalPath))
+        );
     }
 }

@@ -43,10 +43,10 @@
 
         // Menambahkan custom parameter
         fbq('track', 'Purchase', {
-            content_name: "{{ $data->event->name }}"
-            content_type: 'product'
-            currency: 'IDR'
-            value: "{{ $data->total_pembayaran }}"
+            content_name: "{{ $data->event->name }}",
+            content_type: 'product',
+            currency: 'IDR',
+            value: {{ (int) $data->total_pembayaran }}
         });
     </script>
     <noscript>
@@ -165,12 +165,26 @@
                             </div>
                         </div>
 
+                        <!-- Midtrans Snap Payment Button -->
+                        @if ($data->snap_token && $data->status_pembayaran === 'Pending')
+                        <div class="text-center mb-4">
+                            <div class="card-body">
+                                <p class="fw-bold text-muted">Selesaikan pembayaran via Midtrans</p>
+                                <button id="pay-button" class="btn btn-lg w-100 text-white"
+                                    style="background-color: #5a2d67"
+                                    onclick="payWithMidtrans()">
+                                    <i class="bi bi-credit-card-2-front"></i> Bayar Sekarang
+                                </button>
+                                <p class="text-muted mt-2 small">Didukung: Transfer Bank, GoPay, OVO, QRIS, dll.</p>
+                            </div>
+                        </div>
+                        @else
                         <!-- QR Code -->
                         <div class="text-center mb-4">
                             <div class="card-body">
                                 @if ($data->payment->name == 'Qris')
                                     <p>Scan kode QR di bawah</p>
-                                    <img src="{{ asset('image/qris.jpg') }}" alt="QR Code" class="img-fluid mb-3">
+                                    <img src="{{ asset('image/qris_baru.jpeg') }}" alt="QR Code" class="img-fluid mb-3">
                                 @else
                                     <p>Verifikasi pembayaran dengan menghubungi admin dan kirim bukti transfer. Setelah
                                         pembayaran Anda berhasil admin verifikasi, tiket akan segera dikirimkan ke
@@ -239,12 +253,13 @@
                                         }
                                     </script>
                                 @endif
-                                <a href="https://wa.me/6282121392363" class="btn btn-lg w-100 text-white"
-                                    style="background-color: #5a2d67">
-                                    <i class="bi bi-shield-check"></i> Hubungi Admin
+                                <a href="https://wa.me/6282121392363?text=Halo%20Kak,%20apakah%20pembayaran%20untuk%20sosial%20trip%20saya%20sudah%20masuk%20"
+                                    class="btn btn-lg w-100 text-white" style="background-color: #5a2d67">
+                                    <i class="bi bi-shield-check"></i> Konfirmasi Pembayaran
                                 </a>
                             </div>
                         </div>
+                        @endif
 
                         <!-- Petunjuk Pembayaran -->
                         {{-- <div class="shadow-sm">
@@ -319,6 +334,47 @@
 
     </main>
     @include('components.layout.footer')
+    {{-- Midtrans Snap.js hanya dimuat jika ada snap_token --}}
+    @if ($data->snap_token && $data->status_pembayaran === 'Pending')
+    <script src="{{ config('midtrans.snap_url') }}"
+        data-client-key="{{ config('midtrans.client_key') }}"></script>
+    <script>
+        function payWithMidtrans() {
+            const btn = document.getElementById('pay-button');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Memproses...';
+
+            snap.pay('{{ $data->snap_token }}', {
+                onSuccess: function(result) {
+                    window.location.href = '/midtrans/finish/{{ $data->invoice }}';
+                },
+                onPending: function(result) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-credit-card-2-front"></i> Bayar Sekarang';
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Menunggu Pembayaran',
+                        text: 'Pembayaran sedang diproses. Cek email Anda untuk instruksi lebih lanjut.'
+                    });
+                },
+                onError: function(result) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-credit-card-2-front"></i> Bayar Sekarang';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Pembayaran Gagal',
+                        text: 'Terjadi kesalahan. Silakan coba lagi.'
+                    });
+                },
+                onClose: function() {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-credit-card-2-front"></i> Bayar Sekarang';
+                }
+            });
+        }
+    </script>
+    @endif
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

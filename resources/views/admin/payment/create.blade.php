@@ -30,13 +30,26 @@
                             <x-form-file name="image" label="Logo Payment"
                                 hint="Upload logo bank/e-wallet (PNG/JPG, max 1MB)" :required="true" />
 
+                            {{-- Payment Type --}}
+                            <div class="mb-3">
+                                <label for="type" class="form-label fw-semibold">Tipe Payment <span class="text-danger">*</span></label>
+                                <select name="type" id="type" class="form-select @error('type') is-invalid @enderror" required>
+                                    <option value="manual" {{ old('type') === 'midtrans' ? '' : 'selected' }}>Manual (Transfer Bank / QRIS)</option>
+                                    <option value="midtrans" {{ old('type') === 'midtrans' ? 'selected' : '' }}>Midtrans (Otomatis)</option>
+                                </select>
+                                @error('type')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted">Pilih <strong>Midtrans</strong> untuk pembayaran otomatis via Snap. Pilih <strong>Manual</strong> untuk transfer biasa.</small>
+                            </div>
+
                             {{-- Payment Name --}}
                             <x-form-input name="name" label="Nama Payment" placeholder="Contoh: BCA, Mandiri, GoPay"
                                 :required="true" />
 
                             {{-- Account Number --}}
-                            <x-form-input name="no_rek" label="Nomor Rekening" placeholder="Masukkan nomor rekening/akun"
-                                :required="true" />
+                            <x-form-input name="no_rek" label="Nomor Rekening" placeholder="Nomor rekening / kosongkan jika Midtrans"
+                                :required="false" />
 
                             {{-- Submit --}}
                             <div class="d-flex gap-2 pt-3 border-top">
