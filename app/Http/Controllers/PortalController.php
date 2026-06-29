@@ -85,8 +85,9 @@ class PortalController extends Controller
                 ->orderBy('id')
                 ->get();
         });
+        $defaultPayment = $payment->firstWhere('type', 'midtrans') ?? $payment->first();
 
-        return view('portal.checkout', compact('data', 'payment'));
+        return view('portal.checkout', compact('data', 'payment', 'defaultPayment'));
     }
 
     /**
