@@ -5,11 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Transaksi;
-use App\Models\Volunteer;
 use App\Models\KodeVoucher;
-use App\Services\MidtransService;
+use App\Services\CheckoutService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\RedirectResponse;
@@ -91,163 +89,54 @@ class PortalController extends Controller
     }
 
     /**
-     * Process transaction.
+     * Process transaction (web portal — delegates to CheckoutService).
      */
     public function transaksiPost(Request $request, string $slug): RedirectResponse
     {
         $request->validate([
-            'jumlah_tiket' => 'required|integer|min:1',
-            'payment' => [
-                'required',
-                Rule::exists('payments', 'id')->where(fn ($query) =>
-                    $query->where('status', true)->where('type', 'midtrans')
-                ),
-            ],
-            'pengunjung' => 'required|array|min:1',
-            'pengunjung.*.name' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
+            'jumlah_tiket'         => 'required|integer|min:1',
+            'payment'              => ['required', Rule::exists('payments', 'id')->where(fn ($q) =>
+                $q->where('status', true)->where('type', 'midtrans')
+            )],
+            'pengunjung'           => 'required|array|min:1',
+            'pengunjung.*.name'    => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'pengunjung.*.telepon' => ['required', 'string', 'min:9', 'max:13', 'regex:/^[0-9]+$/'],
-            'pengunjung.*.email' => ['required', 'email:rfc,dns', 'max:255'],
-            'voucher_code' => 'nullable|string',
+            'pengunjung.*.email'   => ['required', 'email:rfc,dns', 'max:255'],
+            'voucher_code'         => 'nullable|string',
         ], [
-            'pengunjung.*.name.required' => 'Nama wajib diisi',
-            'pengunjung.*.name.min' => 'Nama minimal 3 karakter',
-            'pengunjung.*.name.regex' => 'Nama hanya boleh berisi huruf dan spasi',
+            'pengunjung.*.name.required'    => 'Nama wajib diisi',
+            'pengunjung.*.name.min'         => 'Nama minimal 3 karakter',
+            'pengunjung.*.name.regex'       => 'Nama hanya boleh berisi huruf dan spasi',
             'pengunjung.*.telepon.required' => 'Nomor ponsel wajib diisi',
-            'pengunjung.*.telepon.min' => 'Nomor ponsel minimal 9 digit',
-            'pengunjung.*.telepon.max' => 'Nomor ponsel maksimal 13 digit',
-            'pengunjung.*.telepon.regex' => 'Nomor ponsel hanya boleh berisi angka',
-            'pengunjung.*.email.required' => 'Email wajib diisi',
-            'pengunjung.*.email.email' => 'Format email tidak valid',
-            'payment.required' => 'Metode pembayaran wajib dipilih.',
-            'payment.exists' => 'Metode pembayaran tidak tersedia. Silakan pilih pembayaran Midtrans.',
+            'pengunjung.*.telepon.min'      => 'Nomor ponsel minimal 9 digit',
+            'pengunjung.*.telepon.max'      => 'Nomor ponsel maksimal 13 digit',
+            'pengunjung.*.telepon.regex'    => 'Nomor ponsel hanya boleh berisi angka',
+            'pengunjung.*.email.required'   => 'Email wajib diisi',
+            'pengunjung.*.email.email'      => 'Format email tidak valid',
+            'payment.required'              => 'Metode pembayaran wajib dipilih.',
+            'payment.exists'                => 'Metode pembayaran tidak tersedia. Silakan pilih pembayaran Midtrans.',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            $event = Event::where('slug', $slug)->firstOrFail();
+            $event   = Event::where('slug', $slug)->firstOrFail();
+            $payment = Payment::findOrFail($request->payment);
 
-            $affectedRows = Event::where('id', $event->id)
-                ->where('jumlah_tiket', '>=', $request->jumlah_tiket)
-                ->decrement('jumlah_tiket', $request->jumlah_tiket);
-
-            if ($affectedRows === 0) {
-                throw new \Exception("Tiket tidak mencukupi atau event tidak valid.");
-            }
-
-            $invoice = date('YmdHis') . uniqid();
-            
-            // Handle voucher if provided
-            $voucherId = null;
-            $appliedVoucher = null;
-            if ($request->voucher_code) {
-                $appliedVoucher = KodeVoucher::where('kode', $request->voucher_code)
-                    ->where('id_event', $event->id)
-                    ->where('status', true)
-                    ->where('tanggal_kadaluarsa', '>=', now()->startOfDay())
-                    ->first();
-
-                if ($appliedVoucher) {
-                    // Calculate remaining quota
-                    $remainingQuota = $appliedVoucher->kuota - $appliedVoucher->digunakan;
-
-                    // Check if voucher has enough quota for all tickets
-                    if ($remainingQuota < $request->jumlah_tiket) {
-                        throw new \Exception("Kuota voucher tidak mencukupi. Tersisa {$remainingQuota} kuota, dibutuhkan {$request->jumlah_tiket}.");
-                    }
-
-                    $voucherId = $appliedVoucher->id;
-                    // Increment voucher usage by ticket count
-                    $appliedVoucher->increment('digunakan', $request->jumlah_tiket);
-                }
-            }
-
-            // Helper function to format phone number with +62 prefix
-            $formatPhone = function($phone) {
-                $phone = preg_replace('/[^0-9]/', '', $phone); // Remove non-digits
-                if (str_starts_with($phone, '0')) {
-                    $phone = substr($phone, 1); // Remove leading 0
-                }
-                if (!str_starts_with($phone, '62')) {
-                    $phone = '62' . $phone;
-                }
-                return '+' . $phone;
-            };
-
-            $transaksi = Transaksi::create([
-                'id_event' => $event->id,
-                'invoice' => $invoice,
-                'jumlah_tiket' => $request->jumlah_tiket,
-                'total_pembayaran' => $request->price,
-                'name' => $request->pengunjung[0]['name'],
-                'telepon' => $formatPhone($request->pengunjung[0]['telepon']),
-                'email' => $request->pengunjung[0]['email'],
-                'status_pembayaran' => 'Pending',
-                'tanggal_register' => now(),
-                'tanggal_pembayaran' => null,
-                'id_payment' => $request->payment,
-                'id_voucher' => $voucherId,
-            ]);
-
-            // Process volunteers
-            foreach ($request->pengunjung as $pengunjungData) {
-                $volunteer = Volunteer::firstOrCreate(
-                    ['email' => $pengunjungData['email']],
-                    [
-                        'name' => $pengunjungData['name'],
-                        'telepon' => $formatPhone($pengunjungData['telepon']),
-                    ]
-                );
-
-                $transaksi->volunteers()->syncWithoutDetaching([$volunteer->id]);
-            }
-
-            // Redeem voucher eksternal ke sistem chatkebaikan; gagal = rollback.
-            if ($appliedVoucher && $appliedVoucher->is_external) {
-                $this->redeemExternalVoucher($appliedVoucher, $transaksi);
-            }
-
-            // Generate Snap token jika metode pembayaran adalah Midtrans
-            $payment = Payment::find($request->payment);
-            if ($payment && $payment->type === 'midtrans') {
-                try {
-                    $midtransService = app(MidtransService::class);
-                    $transaksi->load('event');
-                    $snapToken = $midtransService->createSnapToken($transaksi);
-                    $transaksi->update(['snap_token' => $snapToken]);
-                } catch (\Exception $e) {
-                    // Snap token gagal dibuat: log dan lanjutkan (invoice tetap tampil, user bisa hubungi admin)
-                    Log::error('Gagal membuat Snap token Midtrans', [
-                        'invoice' => $transaksi->invoice,
-                        'error'   => $e->getMessage(),
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            Log::info('Transaction created via portal', [
-                'invoice'         => $transaksi->invoice,
-                'event_id'        => $event->id,
-                'event_name'      => $event->name,
-                'total'           => $request->price,
-                'ticket_count'    => $request->jumlah_tiket,
-                'voucher_applied' => $voucherId !== null,
-                'payment_type'    => $payment?->type ?? 'unknown',
-                'ip'              => $request->ip(),
-            ]);
+            $transaksi = app(CheckoutService::class)->process(
+                $event,
+                (int) $request->jumlah_tiket,
+                $payment,
+                $request->pengunjung,
+                $request->voucher_code
+            );
 
             return redirect("/invoice/{$transaksi->invoice}")->with('success', 'Transaksi berhasil');
-
         } catch (\Exception $e) {
-            DB::rollback();
-            
             Log::error('Transaction failed via portal', [
                 'event_slug' => $slug,
-                'error' => $e->getMessage(),
-                'ip' => $request->ip(),
+                'error'      => $e->getMessage(),
+                'ip'         => $request->ip(),
             ]);
-            
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -450,41 +339,5 @@ class PortalController extends Controller
         return $this->respondWithLocalVoucher($voucher);
     }
 
-    /**
-     * Beri tahu API eksternal bahwa voucher sudah terpakai.
-     * Lempar exception bila gagal agar transaksi di-rollback.
-     */
-    private function redeemExternalVoucher(KodeVoucher $voucher, Transaksi $transaksi): void
-    {
-        $cfg = config('services.chatkebaikan');
-        $url = $cfg['redeem_url'] ?? '';
-
-        if (empty($url)) {
-            throw new \Exception('Endpoint redeem voucher eksternal belum dikonfigurasi.');
-        }
-
-        $method = strtoupper($cfg['redeem_method'] ?? 'POST');
-        $payload = [
-            'kode' => $voucher->kode,
-        ];
-
-        $response = Http::timeout($cfg['timeout'])
-            ->acceptJson()
-            ->withOptions(['allow_redirects' => ['strict' => true]]) // jaga POST tetap POST jika ada redirect 301/302
-            ->send($method, $url, ['json' => $payload]);
-
-        if (!$response->successful()) {
-            Log::error('External voucher redeem failed', [
-                'kode' => $voucher->kode,
-                'invoice' => $transaksi->invoice,
-                'status' => $response->status(),
-            ]);
-            throw new \Exception('Gagal redeem voucher eksternal (HTTP ' . $response->status() . ').');
-        }
-
-        Log::info('External voucher redeemed', [
-            'kode' => $voucher->kode,
-            'invoice' => $transaksi->invoice,
-        ]);
-    }
 }
+
