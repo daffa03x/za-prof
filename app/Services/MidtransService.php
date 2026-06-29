@@ -3,10 +3,11 @@
 namespace App\Services;
 
 use App\Models\Transaksi;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Midtrans\Config;
 use Midtrans\Snap;
-use Midtrans\Notification;
 
 /**
  * Class MidtransService
@@ -18,11 +19,11 @@ class MidtransService
 {
     public function __construct()
     {
-        Config::$serverKey    = config('midtrans.server_key');
-        Config::$clientKey    = config('midtrans.client_key');
+        Config::$serverKey = config('midtrans.server_key');
+        Config::$clientKey = config('midtrans.client_key');
         Config::$isProduction = config('midtrans.is_production');
-        Config::$isSanitized  = config('midtrans.is_sanitized');
-        Config::$is3ds        = config('midtrans.is_3ds');
+        Config::$isSanitized = config('midtrans.is_sanitized');
+        Config::$is3ds = config('midtrans.is_3ds');
     }
 
     /**
@@ -35,32 +36,32 @@ class MidtransService
     {
         $params = [
             'transaction_details' => [
-                'order_id'     => $transaksi->invoice,
+                'order_id' => $transaksi->invoice,
                 'gross_amount' => (int) $transaksi->total_pembayaran,
             ],
             'customer_details' => [
                 'first_name' => $transaksi->name,
-                'email'      => $transaksi->email,
-                'phone'      => $transaksi->telepon,
+                'email' => $transaksi->email,
+                'phone' => $transaksi->telepon,
             ],
             'item_details' => [
                 [
-                    'id'       => 'TIKET-' . $transaksi->id_event,
-                    'price'    => (int) ($transaksi->total_pembayaran / $transaksi->jumlah_tiket),
+                    'id' => 'TIKET-'.$transaksi->id_event,
+                    'price' => (int) ($transaksi->total_pembayaran / $transaksi->jumlah_tiket),
                     'quantity' => (int) $transaksi->jumlah_tiket,
-                    'name'     => 'Tiket ' . ($transaksi->event?->name ?? 'Event'),
+                    'name' => 'Tiket '.($transaksi->event?->name ?? 'Event'),
                 ],
             ],
             'callbacks' => [
-                'finish' => url('/midtrans/finish/' . $transaksi->invoice),
+                'finish' => url('/midtrans/finish/'.$transaksi->invoice),
             ],
         ];
 
         $snapToken = Snap::getSnapToken($params);
 
         Log::info('Midtrans Snap token created', [
-            'invoice'    => $transaksi->invoice,
-            'order_id'   => $transaksi->invoice,
+            'invoice' => $transaksi->invoice,
+            'order_id' => $transaksi->invoice,
             'gross_amount' => $transaksi->total_pembayaran,
         ]);
 
@@ -73,29 +74,54 @@ class MidtransService
      *
      * @throws \Exception
      */
-    public function parseNotification(): array
+    public function parseNotification(Request $request): array
     {
-        $notification = new Notification();
+        $payload = $request->json()->all();
 
-        $orderId           = $notification->order_id;
-        $transactionStatus = $notification->transaction_status;
-        $fraudStatus       = $notification->fraud_status;
-        $paymentType       = $notification->payment_type;
-        $grossAmount       = $notification->gross_amount;
+        if (empty($payload)) {
+            $payload = $request->all();
+        }
+
+        foreach (['order_id', 'transaction_status', 'gross_amount', 'status_code', 'signature_key'] as $field) {
+            if (empty($payload[$field])) {
+                throw new InvalidArgumentException("Missing Midtrans notification field: {$field}.");
+            }
+        }
+
+        $serverKey = config('midtrans.server_key');
+        if (empty($serverKey)) {
+            throw new InvalidArgumentException('Midtrans server key is not configured.');
+        }
+
+        $expectedSignature = hash(
+            'sha512',
+            $payload['order_id'].$payload['status_code'].$payload['gross_amount'].$serverKey
+        );
+
+        if (! hash_equals($expectedSignature, (string) $payload['signature_key'])) {
+            throw new InvalidArgumentException('Invalid Midtrans signature.');
+        }
+
+        $orderId = (string) $payload['order_id'];
+        $transactionStatus = (string) $payload['transaction_status'];
+        $fraudStatus = $payload['fraud_status'] ?? null;
+        $paymentType = $payload['payment_type'] ?? null;
+        $grossAmount = (string) $payload['gross_amount'];
 
         Log::info('Midtrans notification received', [
-            'order_id'           => $orderId,
+            'order_id' => $orderId,
             'transaction_status' => $transactionStatus,
-            'fraud_status'       => $fraudStatus,
-            'payment_type'       => $paymentType,
+            'fraud_status' => $fraudStatus,
+            'payment_type' => $paymentType,
         ]);
 
         return [
-            'order_id'           => $orderId,
+            'order_id' => $orderId,
             'transaction_status' => $transactionStatus,
-            'fraud_status'       => $fraudStatus,
-            'payment_type'       => $paymentType,
-            'gross_amount'       => $grossAmount,
+            'fraud_status' => $fraudStatus,
+            'payment_type' => $paymentType,
+            'gross_amount' => $grossAmount,
+            'status_code' => (string) $payload['status_code'],
         ];
     }
 
