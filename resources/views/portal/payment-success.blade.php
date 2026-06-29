@@ -125,7 +125,7 @@
                                     <a href="{{ url('/') }}" class="btn btn-outline-secondary btn-lg">
                                         <i class="bi bi-house me-1"></i> Kembali ke Beranda
                                     </a>
-                                    <a href="{{ route('portal.invoice', $data->invoice) }}"
+                                    <a href="{{ route('invoice', $data->invoice) }}"
                                         class="btn btn-lg text-white"
                                         style="background-color:#5a2d67;">
                                         <i class="bi bi-receipt me-1"></i> Lihat Invoice
