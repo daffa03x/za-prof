@@ -177,9 +177,11 @@
 
             <div class="container" data-aos="fade-up" data-aos-delay="100">
 
-                <form action="{{ route('transaksi.post', ['slug' => $data->slug]) }}" method="POST"
-                    onsubmit="return validatePayment()">
+                <form action="{{ route('transaksi.post', ['slug' => $data->slug]) }}" method="POST">
                     @csrf
+                    @if ($defaultPayment)
+                        <input type="hidden" name="payment" value="{{ $defaultPayment->id }}">
+                    @endif
                     <div class="row gy-4">
 
                         <div class="col-lg-8">
@@ -258,44 +260,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="container mt-5">
-                                    <h3 class="mb-4">Metode Pembayaran</h3>
-                                    <div class="list-group">
-                                        @foreach ($payment as $index => $item)
-                                            <label
-                                                class="list-group-item d-flex justify-content-between align-items-center">
-                                                <input type="radio" name="payment" value="{{ $item->id }}"
-                                                    class="form-check-input mx-3"
-                                                    {{ $index === 0 || stripos($item->name, 'qris') !== false ? 'checked' : '' }}>
-                                                <div class="d-flex justify-content-end align-items-center flex-grow-1">
-                                                    <img src="{{ asset($item->image) }}" alt="{{ $item->name }}"
-                                                        class="me-2" style="width: 110px; height: 40px;">
-                                                    <span class="fw-semibold">{{ $item->name }}</span>
-                                                </div>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                </div>
-                                <script>
-                                    function validatePayment() {
-                                        const selected = document.querySelector('input[name="payment"]:checked');
-                                        if (!selected) {
-                                            // Jika tidak ada metode yang dipilih
-                                            Swal.fire({
-                                                icon: 'warning',
-                                                title: 'Metode Pembayaran Belum Dipilih!',
-                                                text: 'Silakan pilih salah satu metode pembayaran.',
-                                                toast: true,
-                                                position: 'top-end',
-                                                timer: 3000,
-                                                showConfirmButton: false
-
-                                            });
-                                            return false; // mencegah form submit
-                                        }
-                                        return true; // izinkan submit jika sudah dipilih
-                                    }
-                                </script>
                             </div>
                         </div>
 
