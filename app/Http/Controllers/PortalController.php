@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -84,10 +85,9 @@ class PortalController extends Controller
                 ->where('status', true)
                 ->orderBy('id')
                 ->get();
-        });
-        $defaultPayment = $payment->firstWhere('type', 'midtrans') ?? $payment->first();
+        })->where('type', 'midtrans')->values();
 
-        return view('portal.checkout', compact('data', 'payment', 'defaultPayment'));
+        return view('portal.checkout', compact('data', 'payment'));
     }
 
     /**
@@ -97,7 +97,12 @@ class PortalController extends Controller
     {
         $request->validate([
             'jumlah_tiket' => 'required|integer|min:1',
-            'payment' => 'required|exists:payments,id',
+            'payment' => [
+                'required',
+                Rule::exists('payments', 'id')->where(fn ($query) =>
+                    $query->where('status', true)->where('type', 'midtrans')
+                ),
+            ],
             'pengunjung' => 'required|array|min:1',
             'pengunjung.*.name' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'pengunjung.*.telepon' => ['required', 'string', 'min:9', 'max:13', 'regex:/^[0-9]+$/'],
@@ -113,6 +118,8 @@ class PortalController extends Controller
             'pengunjung.*.telepon.regex' => 'Nomor ponsel hanya boleh berisi angka',
             'pengunjung.*.email.required' => 'Email wajib diisi',
             'pengunjung.*.email.email' => 'Format email tidak valid',
+            'payment.required' => 'Metode pembayaran wajib dipilih.',
+            'payment.exists' => 'Metode pembayaran tidak tersedia. Silakan pilih pembayaran Midtrans.',
         ]);
 
         DB::beginTransaction();
@@ -248,7 +255,7 @@ class PortalController extends Controller
     /**
      * Display invoice.
      */
-    public function invoice(string $invoice): View
+    public function invoice(string $invoice): View|RedirectResponse
     {
         $data = Transaksi::with(['event', 'payment', 'volunteers'])
             ->where('invoice', $invoice)
@@ -258,10 +265,11 @@ class PortalController extends Controller
             return view('portal.error_tiket');
         }
 
-        $tanggalDibuat = Carbon::parse($data->tanggal_register);
-        $batasWaktu = Carbon::now()->subDays(1);
+        if ($data->status_pembayaran === 'Success') {
+            return redirect()->route('portal.tiket', $data->invoice);
+        }
 
-        if ($tanggalDibuat->lessThan($batasWaktu)) {
+        if (!$data->canAccessInvoice()) {
             return view('portal.error_tiket');
         }
 
