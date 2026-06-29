@@ -53,7 +53,7 @@ class MidtransService
                 ],
             ],
             'callbacks' => [
-                'finish' => url('/midtrans/finish/'.$transaksi->invoice),
+                'finish' => rtrim(env('FRONTEND_URL', url('/')), '/') . '/payment/success?order_id=' . $transaksi->invoice,
             ],
         ];
 

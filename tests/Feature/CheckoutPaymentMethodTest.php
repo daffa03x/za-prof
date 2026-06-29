@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class CheckoutPaymentMethodTest extends TestCase
 {
-    public function test_checkout_hides_payment_method_choices_and_uses_midtrans_default(): void
+    public function test_checkout_shows_only_midtrans_payment_methods(): void
     {
         $event = new Event([
             'id' => 10,
@@ -39,16 +39,17 @@ class CheckoutPaymentMethodTest extends TestCase
         ]);
         $midtrans->id = 2;
         $payment = new Collection([$manual, $midtrans]);
-        $defaultPayment = $midtrans;
 
         $this->withViewErrors([]);
 
-        $response = $this->view('portal.checkout', compact('event', 'payment', 'defaultPayment') + [
+        $response = $this->view('portal.checkout', compact('event', 'payment') + [
             'data' => $event,
         ]);
 
-        $response->assertDontSee('Metode Pembayaran');
-        $response->assertDontSee('type="radio"', false);
-        $response->assertSee('type="hidden" name="payment" value="'.$midtrans->id.'"', false);
+        $response->assertSee('Metode Pembayaran');
+        $response->assertSee('type="radio" name="payment" value="'.$midtrans->id.'"', false);
+        $response->assertDontSee('type="hidden" name="payment"', false);
+        $response->assertDontSee('Transfer Manual');
+        $response->assertDontSee('1234567890');
     }
 }

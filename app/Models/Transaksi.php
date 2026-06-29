@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Transaksi
@@ -93,6 +94,22 @@ class Transaksi extends Model
     }
 
     /**
+     * Check whether the public invoice page should still be accessible.
+     */
+    public function canAccessInvoice(): bool
+    {
+        if ($this->status_pembayaran === 'Success') {
+            return false;
+        }
+
+        if (! $this->tanggal_register) {
+            return false;
+        }
+
+        return Carbon::parse($this->tanggal_register)->greaterThanOrEqualTo(now()->subDay());
+    }
+
+    /**
      * Get the event that the transaction belongs to.
      */
     public function event(): BelongsTo
@@ -122,6 +139,6 @@ class Transaksi extends Model
     public function volunteers(): BelongsToMany
     {
         return $this->belongsToMany(Volunteer::class, 'transaksi_volunteers', 'id_transaksi', 'id_volunteer')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 }
