@@ -32,7 +32,7 @@ class CheckoutExternalRedeemTest extends TestCase
         Http::fake(['*redeem*' => Http::response(['ok' => true], 200)]);
 
         $event = Event::factory()->create(['harga' => 200000, 'jumlah_tiket' => 10]);
-        $payment = Payment::factory()->create(['status' => true, 'no_rek' => '1234567890']);
+        $payment = Payment::factory()->create(['status' => true, 'type' => 'midtrans', 'no_rek' => 'MIDTRANS']);
         $voucher = KodeVoucher::factory()->external()->create([
             'id_event' => $event->id,
             'kode' => 'CHATBAIK-RD1',
@@ -54,7 +54,7 @@ class CheckoutExternalRedeemTest extends TestCase
         Http::fake(['*redeem*' => Http::response('', 500)]);
 
         $event = Event::factory()->create(['harga' => 200000, 'jumlah_tiket' => 10]);
-        $payment = Payment::factory()->create(['status' => true, 'no_rek' => '1234567890']);
+        $payment = Payment::factory()->create(['status' => true, 'type' => 'midtrans', 'no_rek' => 'MIDTRANS']);
         $voucher = KodeVoucher::factory()->external()->create([
             'id_event' => $event->id,
             'kode' => 'CHATBAIK-RD1',
