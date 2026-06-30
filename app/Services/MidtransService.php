@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Payment;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Midtrans\Config;
+use Midtrans\CoreApi;
 use Midtrans\Snap;
 
 /**
@@ -66,6 +68,94 @@ class MidtransService
         ]);
 
         return $snapToken;
+    }
+
+    /**
+     * Buat charge Core API untuk channel spesifik (VA, QRIS, e-wallet).
+     * Kembalikan instruksi pembayaran ternormalisasi untuk dirender di UI sendiri.
+     *
+     * @throws \Exception
+     */
+    public function charge(Transaksi $transaksi, Payment $payment): array
+    {
+        $params = [
+            'transaction_details' => [
+                'order_id' => $transaksi->invoice,
+                'gross_amount' => (int) $transaksi->total_pembayaran,
+            ],
+            'customer_details' => [
+                'first_name' => $transaksi->name,
+                'email' => $transaksi->email,
+                'phone' => $transaksi->telepon,
+            ],
+        ];
+
+        switch ($payment->midtrans_payment_type) {
+            case 'bank_transfer':
+                $params['payment_type'] = 'bank_transfer';
+                $params['bank_transfer'] = ['bank' => $payment->midtrans_bank];
+                break;
+            case 'echannel':
+                $params['payment_type'] = 'echannel';
+                $params['echannel'] = [
+                    'bill_info1' => 'Pembayaran',
+                    'bill_info2' => 'Tiket '.($transaksi->event?->name ?? 'Event'),
+                ];
+                break;
+            case 'gopay':
+            case 'shopeepay':
+            case 'qris':
+                $params['payment_type'] = $payment->midtrans_payment_type;
+                break;
+            default:
+                throw new InvalidArgumentException(
+                    "Channel Midtrans tidak didukung: {$payment->midtrans_payment_type}."
+                );
+        }
+
+        $response = (array) CoreApi::charge($params);
+
+        $instructions = $this->normalizeChargeResponse($response);
+
+        Log::info('Midtrans Core API charge created', [
+            'invoice' => $transaksi->invoice,
+            'payment_type' => $payment->midtrans_payment_type,
+        ]);
+
+        return $instructions;
+    }
+
+    /**
+     * Normalisasi response Core API charge ke struktur konsisten untuk frontend.
+     */
+    private function normalizeChargeResponse(array $response): array
+    {
+        $instructions = [
+            'expiry_time' => $response['expiry_time'] ?? null,
+        ];
+
+        if (! empty($response['va_numbers'][0])) {
+            $va = (array) $response['va_numbers'][0];
+            $instructions['bank'] = $va['bank'] ?? null;
+            $instructions['va_number'] = $va['va_number'] ?? null;
+        }
+
+        if (! empty($response['bill_key'])) {
+            $instructions['bill_key'] = $response['bill_key'];
+            $instructions['biller_code'] = $response['biller_code'] ?? null;
+        }
+
+        foreach ((array) ($response['actions'] ?? []) as $action) {
+            $action = (array) $action;
+            if (($action['name'] ?? null) === 'generate-qr-code') {
+                $instructions['qr_url'] = $action['url'] ?? null;
+            }
+            if (($action['name'] ?? null) === 'deeplink-redirect') {
+                $instructions['deeplink_url'] = $action['url'] ?? null;
+            }
+        }
+
+        return $instructions;
     }
 
     /**
