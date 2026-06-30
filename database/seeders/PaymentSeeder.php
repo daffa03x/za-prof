@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Payment;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Cache;
 
 class PaymentSeeder extends Seeder
 {
@@ -40,5 +41,7 @@ class PaymentSeeder extends Seeder
                 ]
             );
         }
+
+        Cache::forget('active_payment_methods');
     }
 }
