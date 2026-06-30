@@ -2,13 +2,32 @@
 
 namespace Tests\Unit;
 
+use App\Models\Payment;
+use App\Models\Transaksi;
 use App\Services\MidtransService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 use Tests\TestCase;
 
 class MidtransServiceTest extends TestCase
 {
+    use RefreshDatabase;
+
+    public function test_charge_throws_for_unsupported_payment_type(): void
+    {
+        $payment = Payment::factory()->create([
+            'type' => 'midtrans',
+            'midtrans_payment_type' => 'unsupported_channel',
+        ]);
+        $transaksi = Transaksi::factory()->create(['id_payment' => $payment->id]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Channel Midtrans tidak didukung: unsupported_channel.');
+
+        (new MidtransService)->charge($transaksi, $payment);
+    }
+
     public function test_parse_notification_accepts_valid_midtrans_signature(): void
     {
         config(['midtrans.server_key' => 'server-test-key']);
