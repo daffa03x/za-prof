@@ -13,7 +13,7 @@ class PaymentMethodController extends Controller
     public function index(): JsonResponse
     {
         $methods = Cache::remember('active_payment_methods', 1800, function () {
-            return Payment::select(['id', 'name', 'image', 'type'])
+            return Payment::select(['id', 'name', 'image', 'type', 'midtrans_payment_type'])
                 ->where('status', true)
                 ->orderBy('id')
                 ->get();
