@@ -11,7 +11,7 @@ class TransaksiController extends Controller
 {
     public function show(string $invoice): JsonResponse
     {
-        $transaksi = Transaksi::with('event')
+        $transaksi = Transaksi::with(['event', 'payment'])
             ->where('invoice', $invoice)
             ->first();
 

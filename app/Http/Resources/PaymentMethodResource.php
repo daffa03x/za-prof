@@ -10,10 +10,11 @@ class PaymentMethodResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'    => $this->id,
-            'name'  => $this->name,
-            'image' => $this->image ? url('/' . $this->image) : null,
-            'type'  => $this->type,
+            'id'                     => $this->id,
+            'name'                   => $this->name,
+            'image'                  => $this->image ? url('/' . $this->image) : null,
+            'type'                   => $this->type,
+            'midtrans_payment_type'  => $this->midtrans_payment_type,
         ];
     }
 }

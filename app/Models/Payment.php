@@ -34,6 +34,8 @@ class Payment extends Model
         'name',
         'no_rek',
         'type',
+        'midtrans_payment_type',
+        'midtrans_bank',
         'image',
         'status',
     ];

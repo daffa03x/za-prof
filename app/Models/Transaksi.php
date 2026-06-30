@@ -61,6 +61,7 @@ class Transaksi extends Model
         'id_payment',
         'id_voucher',
         'snap_token',
+        'payment_instructions',
     ];
 
     /**
@@ -83,6 +84,7 @@ class Transaksi extends Model
         'jumlah_tiket' => 'integer',
         'total_pembayaran' => 'integer',
         'status_pembayaran' => 'string',
+        'payment_instructions' => 'array',
     ];
 
     /**

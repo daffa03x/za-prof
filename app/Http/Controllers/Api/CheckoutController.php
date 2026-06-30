@@ -21,7 +21,7 @@ class CheckoutController extends Controller
             'event_slug'           => 'required|string|exists:events,slug',
             'jumlah_tiket'         => 'required|integer|min:1|max:50',
             'payment_method_id'    => ['required', Rule::exists('payments', 'id')->where(fn ($q) =>
-                $q->where('status', true)->where('type', 'midtrans')
+                $q->where('status', true)
             )],
             'voucher_code'         => 'nullable|string|max:100',
             'pengunjung'           => 'required|array|min:1|max:3',
@@ -54,9 +54,11 @@ class CheckoutController extends Controller
             );
 
             return response()->json([
-                'success'    => true,
-                'order_id'   => $transaksi->invoice,
-                'snap_token' => $transaksi->snap_token ?? '',
+                'success'              => true,
+                'order_id'             => $transaksi->invoice,
+                'snap_token'           => $transaksi->snap_token ?? '',
+                'payment_channel'      => $payment->midtrans_payment_type,
+                'payment_instructions' => $transaksi->payment_instructions,
             ]);
         } catch (\Exception $e) {
             Log::error('API checkout failed', [

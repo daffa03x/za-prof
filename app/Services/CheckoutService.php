@@ -103,8 +103,20 @@ class CheckoutService
                 $this->redeemExternalVoucher($appliedVoucher, $transaksi);
             }
 
-            // 7. Generate Snap token (non-fatal jika gagal)
-            if ($payment->type === 'midtrans') {
+            // 7. Generate instruksi pembayaran (non-fatal jika gagal)
+            if ($payment->type === 'midtrans' && $payment->midtrans_payment_type) {
+                try {
+                    $transaksi->load('event');
+                    $instructions = $this->midtransService->charge($transaksi, $payment);
+                    $transaksi->update(['payment_instructions' => $instructions]);
+                    $transaksi->payment_instructions = $instructions;
+                } catch (\Exception $e) {
+                    Log::error('Gagal membuat charge Midtrans Core API', [
+                        'invoice' => $transaksi->invoice,
+                        'error'   => $e->getMessage(),
+                    ]);
+                }
+            } elseif ($payment->type === 'midtrans') {
                 try {
                     $transaksi->load('event');
                     $snapToken = $this->midtransService->createSnapToken($transaksi);

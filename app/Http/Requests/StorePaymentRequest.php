@@ -22,10 +22,12 @@ class StorePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type'   => ['required', 'in:manual,midtrans'],
-            'name'   => ['required', 'string', 'max:100'],
-            'no_rek' => ['nullable', 'string', 'max:100'],
-            'image'  => ['required', 'image', 'mimes:jpeg,png,jpg,gif,svg,webp', 'max:2048'],
+            'type'                   => ['required', 'in:manual,midtrans'],
+            'name'                   => ['required', 'string', 'max:100'],
+            'no_rek'                 => ['nullable', 'string', 'max:100'],
+            'midtrans_payment_type'  => ['nullable', 'in:bank_transfer,echannel,gopay,shopeepay,qris'],
+            'midtrans_bank'          => ['nullable', 'in:bca,bni,bri,permata,cimb', 'required_if:midtrans_payment_type,bank_transfer'],
+            'image'                  => ['required', 'image', 'mimes:jpeg,png,jpg,gif,svg,webp', 'max:2048'],
         ];
     }
 
