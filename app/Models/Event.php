@@ -19,11 +19,14 @@ use Illuminate\Support\Str;
  * @property string|null $mitra
  * @property string|null $website
  * @property string|null $deskripsi
+ * @property array<int, string>|null $benefits
+ * @property array<int, array<string, string>>|null $agenda
  * @property bool $status
  * @property \Carbon\Carbon $waktu_mulai
  * @property \Carbon\Carbon $waktu_berakhir
  * @property string|null $nama_tempat
  * @property string|null $alamat
+ * @property string|null $direction
  * @property string|null $kota
  * @property int $jumlah_tiket
  * @property int $harga
@@ -47,11 +50,14 @@ class Event extends Model
         'mitra',
         'website',
         'deskripsi',
+        'benefits',
+        'agenda',
         'status',
         'waktu_mulai',
         'waktu_berakhir',
         'nama_tempat',
         'alamat',
+        'direction',
         'kota',
         'jumlah_tiket',
         'harga',
@@ -78,6 +84,8 @@ class Event extends Model
         'waktu_berakhir' => 'datetime',
         'jumlah_tiket' => 'integer',
         'harga' => 'integer',
+        'benefits' => 'array',
+        'agenda' => 'array',
     ];
 
     /**
