@@ -81,6 +81,7 @@ class EventController extends Controller
     {
         try {
             $data = $request->validated();
+            $data = $this->prepareEventData($data);
 
             if ($request->hasFile('image')) {
                 $path = 'image/event/' . date('Y-m');
@@ -140,6 +141,7 @@ class EventController extends Controller
     {
         try {
             $data = $request->validated();
+            $data = $this->prepareEventData($data);
 
             if ($request->hasFile('image')) {
                 // Delete old image and its thumbnail
@@ -388,5 +390,42 @@ class EventController extends Controller
             ]);
             return redirect()->route('event.index')->with('error', 'Gagal mengubah status');
         }
+    }
+
+    /**
+     * Normalize event form data before it is persisted.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function prepareEventData(array $data): array
+    {
+        $benefits = $data['benefits'] ?? [];
+
+        if (is_string($benefits)) {
+            $benefits = preg_split('/\r\n|\r|\n/', $benefits) ?: [];
+        }
+
+        $data['benefits'] = collect($benefits)
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+
+        $data['agenda'] = collect($data['agenda'] ?? [])
+            ->map(fn ($item) => [
+                'time_label' => trim((string) ($item['time_label'] ?? '')),
+                'title' => trim((string) ($item['title'] ?? '')),
+                'description' => trim((string) ($item['description'] ?? '')),
+            ])
+            ->filter(fn ($item) => $item['time_label'] !== '' || $item['title'] !== '' || $item['description'] !== '')
+            ->values()
+            ->all();
+
+        $data['direction'] = isset($data['direction']) && trim((string) $data['direction']) !== ''
+            ? trim((string) $data['direction'])
+            : null;
+
+        return $data;
     }
 }
