@@ -32,13 +32,18 @@ class CheckoutService
         DB::beginTransaction();
 
         try {
+            if (! $event->isActive()) {
+                throw new \Exception('Event sudah sold out.');
+            }
+
             // 1. Potong stok secara atomik
             $affected = Event::where('id', $event->id)
+                ->where('status', true)
                 ->where('jumlah_tiket', '>=', $jumlahTiket)
                 ->decrement('jumlah_tiket', $jumlahTiket);
 
             if ($affected === 0) {
-                throw new \Exception('Tiket tidak mencukupi atau event tidak valid.');
+                throw new \Exception('Tiket sudah sold out atau jumlah tiket tidak mencukupi.');
             }
 
             // 2. Proses voucher

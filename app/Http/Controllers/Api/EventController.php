@@ -17,7 +17,6 @@ class EventController extends Controller
         $perPage = min((int) ($request->input('per_page', 12)), 50);
 
         $events = Event::query()
-            ->where('status', true)
             ->orderByDesc('id')
             ->when($search, fn ($q) =>
                 $q->where(fn ($sub) =>
@@ -40,9 +39,7 @@ class EventController extends Controller
 
     public function show(string $slug): JsonResponse
     {
-        $event = Event::where('slug', $slug)
-            ->where('status', true)
-            ->firstOrFail();
+        $event = Event::where('slug', $slug)->firstOrFail();
 
         return response()->json(['data' => new EventDetailResource($event)]);
     }

@@ -27,8 +27,9 @@ class EventDetailResource extends JsonResource
             'alamat'         => $this->alamat,
             'direction_url'  => $this->direction,
             'jumlah_tiket'   => $this->jumlah_tiket,
-            'status'         => $this->status,
-            'sisa_tiket'     => $this->jumlah_tiket,
+            'status'         => $this->isActive(),
+            'sisa_tiket'     => $this->remainingTickets(),
+            'is_sold_out'    => $this->isSoldOut(),
         ];
     }
 }
