@@ -400,7 +400,7 @@ class TransaksiController extends Controller
                 foreach ($transaksi->volunteers as $volunteer) {
                     try {
                         Mail::to($volunteer->email)->send(
-                            new SendTicket($transaksi->invoice, "https://zillenialaction.id/tiket/{$transaksi->invoice}")
+                            new SendTicket($transaksi->invoice, $this->ticketUrl($transaksi))
                         );
                         
                         $sentEmails[] = $volunteer->email;
@@ -468,9 +468,17 @@ class TransaksiController extends Controller
                     $voucher = KodeVoucher::find($transaksi->id_voucher);
                     if ($voucher && $voucher->is_external) {
                         try {
-                            $redeemResponse = Http::timeout(10)
-                                ->post('http://chatkebaikan.raihmimpi.id/api/dr/voucher/redeem', [
-                                    'kode' => $voucher->kode,
+                            $cfg = config('services.chatkebaikan');
+                            $url = $cfg['redeem_url'] ?? '';
+                            if (empty($url)) {
+                                throw new \RuntimeException('Endpoint redeem voucher eksternal belum dikonfigurasi.');
+                            }
+
+                            $redeemResponse = Http::timeout($cfg['timeout'] ?? 10)
+                                ->acceptJson()
+                                ->withOptions(['allow_redirects' => ['strict' => true]])
+                                ->send(strtoupper($cfg['redeem_method'] ?? 'POST'), $url, [
+                                    'json' => ['kode' => $voucher->kode],
                                 ]);
 
                             Log::info('External voucher redeem response', [
@@ -546,5 +554,16 @@ class TransaksiController extends Controller
                 ], 500);
             }
         }
+    }
+
+    private function ticketUrl(Transaksi $transaksi): string
+    {
+        $url = url('/tiket/'.$transaksi->invoice);
+
+        if (! empty($transaksi->public_token)) {
+            $url .= '?token='.urlencode($transaksi->public_token);
+        }
+
+        return $url;
     }
 }

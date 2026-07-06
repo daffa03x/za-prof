@@ -17,10 +17,14 @@ Route::get('/events/{slug}', [Api\EventController::class, 'show']);
 Route::get('/payment-methods', [Api\PaymentMethodController::class, 'index']);
 
 // Voucher validation
-Route::post('/voucher/validate', [PortalController::class, 'validateVoucher'])->name('api.voucher.validate');
+Route::post('/voucher/validate', [PortalController::class, 'validateVoucher'])
+    ->middleware('throttle:voucher')
+    ->name('api.voucher.validate');
 
 // Checkout
-Route::post('/checkout', [Api\CheckoutController::class, 'store']);
+Route::post('/checkout', [Api\CheckoutController::class, 'store'])
+    ->middleware('throttle:checkout');
 
 // Transaction status
-Route::get('/transaksi/{invoice}', [Api\TransaksiController::class, 'show']);
+Route::get('/transaksi/{invoice}', [Api\TransaksiController::class, 'show'])
+    ->middleware('throttle:transaction-status');

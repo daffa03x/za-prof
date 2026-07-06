@@ -9,6 +9,7 @@ use App\Services\CheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
@@ -19,9 +20,9 @@ class CheckoutController extends Controller
     {
         $data = $request->validate([
             'event_slug'           => 'required|string|exists:events,slug',
-            'jumlah_tiket'         => 'required|integer|min:1|max:50',
+            'jumlah_tiket'         => 'required|integer|min:1|max:3',
             'payment_method_id'    => ['required', Rule::exists('payments', 'id')->where(fn ($q) =>
-                $q->where('status', true)
+                $q->where('status', true)->where('type', 'midtrans')
             )],
             'voucher_code'         => 'nullable|string|max:100',
             'pengunjung'           => 'required|array|min:1|max:3',
@@ -41,9 +42,17 @@ class CheckoutController extends Controller
             'payment_method_id.exists'      => 'Metode pembayaran tidak tersedia.',
         ]);
 
+        if (count($data['pengunjung']) !== (int) $data['jumlah_tiket']) {
+            throw ValidationException::withMessages([
+                'pengunjung' => 'Jumlah data volunteer harus sama dengan jumlah tiket.',
+            ]);
+        }
+
         try {
             $event   = Event::where('slug', $data['event_slug'])->firstOrFail();
-            $payment = Payment::findOrFail($data['payment_method_id']);
+            $payment = Payment::where('status', true)
+                ->where('type', 'midtrans')
+                ->findOrFail($data['payment_method_id']);
 
             $transaksi = $this->checkoutService->process(
                 $event,
@@ -56,6 +65,7 @@ class CheckoutController extends Controller
             return response()->json([
                 'success'              => true,
                 'order_id'             => $transaksi->invoice,
+                'access_token'         => $transaksi->public_token,
                 'snap_token'           => $transaksi->snap_token ?? '',
                 'payment_channel'      => $payment->midtrans_payment_type,
                 'payment_instructions' => $transaksi->payment_instructions,
