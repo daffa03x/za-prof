@@ -131,7 +131,7 @@
                                             {{ $item->tanggal_pembayaran }}
                                         @endif
                                     </td>
-                                    <td>{{ $item->payment->name }}</td>
+                                    <td>{{ $item->payment->name ?? '-' }}</td>
                                     <td>
                                         <a href="{{ route('transaksi.show', $item->invoice) }}"
                                             class="btn btn-sm btn-info m-1 text-white">Lihat</a>

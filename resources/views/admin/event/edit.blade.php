@@ -79,6 +79,10 @@
                             <x-form-input name="alamat" label="Alamat Lengkap"
                                 placeholder="Masukkan alamat lengkap lokasi event" :value="$event->alamat" :required="true" />
 
+                            <x-form-input name="direction" label="Link Direction" type="url"
+                                placeholder="https://maps.google.com/?q=nama+lokasi" :value="$event->direction"
+                                hint="Opsional. Isi dengan link Google Maps atau direction lokasi." />
+
                             {{-- Price & Tickets --}}
                             <div class="row">
                                 <div class="col-md-8">
@@ -112,6 +116,10 @@
                                 <div id="editor">{!! $event->deskripsi !!}</div>
                                 <input type="hidden" name="deskripsi" id="content">
                             </div>
+
+                            @include('admin.event.partials.benefit-fields', ['event' => $event])
+
+                            @include('admin.event.partials.agenda-fields', ['event' => $event])
 
                             {{-- Submit --}}
                             <div class="d-flex gap-2 pt-3 border-top">
