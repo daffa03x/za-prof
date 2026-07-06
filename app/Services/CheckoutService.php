@@ -1,0 +1,233 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Event;
+use App\Models\KodeVoucher;
+use App\Models\Payment;
+use App\Models\Transaksi;
+use App\Models\Volunteer;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+class CheckoutService
+{
+    public function __construct(protected MidtransService $midtransService) {}
+
+    /**
+     * Proses checkout: potong stok, buat transaksi, attach volunteer, redeem voucher, buat snap token.
+     * Total pembayaran dihitung server-side; jangan percaya nilai dari client.
+     *
+     * @param  array<int, array{name: string, email: string, telepon: string}>  $pengunjung
+     * @throws \Exception
+     */
+    public function process(
+        Event $event,
+        int $jumlahTiket,
+        Payment $payment,
+        array $pengunjung,
+        ?string $voucherCode = null
+    ): Transaksi {
+        DB::beginTransaction();
+
+        try {
+            if (! $payment->status || $payment->type !== 'midtrans') {
+                throw new \Exception('Metode pembayaran tidak tersedia.');
+            }
+
+            if (! $event->isActive()) {
+                throw new \Exception('Event sudah sold out.');
+            }
+
+            // 1. Potong stok secara atomik
+            $affected = Event::where('id', $event->id)
+                ->where('status', true)
+                ->where('jumlah_tiket', '>=', $jumlahTiket)
+                ->decrement('jumlah_tiket', $jumlahTiket);
+
+            if ($affected === 0) {
+                throw new \Exception('Tiket sudah sold out atau jumlah tiket tidak mencukupi.');
+            }
+
+            // 2. Proses voucher
+            $voucherId         = null;
+            $discountPerTicket = 0;
+            $appliedVoucher    = null;
+
+            if ($voucherCode) {
+                $appliedVoucher = KodeVoucher::where('kode', strtoupper(trim($voucherCode)))
+                    ->where('id_event', $event->id)
+                    ->where('status', true)
+                    ->where('tanggal_kadaluarsa', '>=', now()->startOfDay())
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($appliedVoucher) {
+                    $remaining = $appliedVoucher->kuota - $appliedVoucher->digunakan;
+                    if ($remaining < $jumlahTiket) {
+                        throw new \Exception("Kuota voucher tidak mencukupi. Tersisa {$remaining} kuota, dibutuhkan {$jumlahTiket}.");
+                    }
+                    $voucherId         = $appliedVoucher->id;
+                    $discountPerTicket = $appliedVoucher->nilai_diskon;
+                    $appliedVoucher->increment('digunakan', $jumlahTiket);
+                }
+            }
+
+            // 3. Hitung total server-side
+            $totalPembayaran = max(0, ($event->harga - $discountPerTicket) * $jumlahTiket);
+
+            // 4. Buat transaksi
+            $invoice   = date('YmdHis') . uniqid();
+            $utamaData = $pengunjung[0];
+
+            $transaksi = Transaksi::create([
+                'id_event'           => $event->id,
+                'invoice'            => $invoice,
+                'jumlah_tiket'       => $jumlahTiket,
+                'total_pembayaran'   => $totalPembayaran,
+                'name'               => $utamaData['name'],
+                'telepon'            => $this->formatPhone($utamaData['telepon']),
+                'email'              => $utamaData['email'],
+                'status_pembayaran'  => 'Pending',
+                'tanggal_register'   => now(),
+                'tanggal_pembayaran' => null,
+                'id_payment'         => $payment->id,
+                'id_voucher'         => $voucherId,
+            ]);
+
+            // 5. Attach volunteer
+            foreach ($pengunjung as $p) {
+                $volunteer = Volunteer::firstOrCreate(
+                    ['email' => $p['email']],
+                    [
+                        'name'    => $p['name'],
+                        'telepon' => $this->formatPhone($p['telepon']),
+                    ]
+                );
+                $transaksi->volunteers()->syncWithoutDetaching([$volunteer->id]);
+            }
+
+            // 6. Redeem voucher eksternal (lempar exception → rollback jika gagal)
+            if ($appliedVoucher && $appliedVoucher->is_external) {
+                $this->redeemExternalVoucher($appliedVoucher, $transaksi);
+            }
+
+            // 7. Generate instruksi pembayaran. Harus sukses agar transaksi tidak tersimpan tanpa jalur bayar.
+            $this->createPaymentInstrument($transaksi, $payment);
+
+            DB::commit();
+
+            Log::info('Transaction created', [
+                'invoice'         => $transaksi->invoice,
+                'event_id'        => $event->id,
+                'total'           => $totalPembayaran,
+                'ticket_count'    => $jumlahTiket,
+                'voucher_applied' => $voucherId !== null,
+                'payment_type'    => $payment->type,
+            ]);
+
+            return $transaksi;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    private function formatPhone(string $phone): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        if (str_starts_with($phone, '0')) {
+            $phone = substr($phone, 1);
+        }
+        if (!str_starts_with($phone, '62')) {
+            $phone = '62' . $phone;
+        }
+        return '+' . $phone;
+    }
+
+    private function createPaymentInstrument(Transaksi $transaksi, Payment $payment): void
+    {
+        try {
+            $transaksi->load('event');
+
+            if ($payment->midtrans_payment_type) {
+                $instructions = $this->midtransService->charge($transaksi, $payment);
+                $this->assertPaymentInstructions($payment, $instructions);
+
+                $transaksi->update(['payment_instructions' => $instructions]);
+                $transaksi->payment_instructions = $instructions;
+
+                return;
+            }
+
+            $snapToken = $this->midtransService->createSnapToken($transaksi);
+            if (! is_string($snapToken) || trim($snapToken) === '') {
+                throw new \RuntimeException('Midtrans Snap token kosong.');
+            }
+
+            $transaksi->update(['snap_token' => $snapToken]);
+            $transaksi->snap_token = $snapToken;
+        } catch (\Throwable $e) {
+            Log::error('Gagal membuat instruksi pembayaran Midtrans', [
+                'invoice' => $transaksi->invoice,
+                'channel' => $payment->midtrans_payment_type,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new \Exception('Gagal membuat instruksi pembayaran. Silakan coba lagi.');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $instructions
+     */
+    private function assertPaymentInstructions(Payment $payment, array $instructions): void
+    {
+        $channel = $payment->midtrans_payment_type;
+
+        $missing = match ($channel) {
+            'bank_transfer' => empty($instructions['bank']) || empty($instructions['va_number']),
+            'echannel' => empty($instructions['bill_key']) || empty($instructions['biller_code']),
+            'qris' => empty($instructions['qr_url']),
+            'gopay', 'shopeepay' => empty($instructions['deeplink_url']) && empty($instructions['qr_url']),
+            default => true,
+        };
+
+        if ($missing) {
+            throw new \RuntimeException("Instruksi pembayaran Midtrans tidak lengkap untuk channel {$channel}.");
+        }
+    }
+
+    private function redeemExternalVoucher(KodeVoucher $voucher, Transaksi $transaksi): void
+    {
+        $cfg = config('services.chatkebaikan');
+        $url = $cfg['redeem_url'] ?? '';
+
+        if (empty($url)) {
+            throw new \Exception('Endpoint redeem voucher eksternal belum dikonfigurasi.');
+        }
+
+        $method  = strtoupper($cfg['redeem_method'] ?? 'POST');
+        $payload = ['kode' => $voucher->kode];
+
+        $response = Http::timeout($cfg['timeout'])
+            ->acceptJson()
+            ->withOptions(['allow_redirects' => ['strict' => true]])
+            ->send($method, $url, ['json' => $payload]);
+
+        if (!$response->successful()) {
+            Log::error('External voucher redeem failed', [
+                'kode'    => $voucher->kode,
+                'invoice' => $transaksi->invoice,
+                'status'  => $response->status(),
+            ]);
+            throw new \Exception('Gagal redeem voucher eksternal (HTTP ' . $response->status() . ').');
+        }
+
+        Log::info('External voucher redeemed', [
+            'kode'    => $voucher->kode,
+            'invoice' => $transaksi->invoice,
+        ]);
+    }
+}

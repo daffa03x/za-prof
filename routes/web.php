@@ -41,7 +41,7 @@ Route::get('/tiket/{invoice}', [PortalController::class, 'tiket'])->name('portal
 // Auth
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-Route::post('/auth', [AuthController::class, 'auth'])->name('auth');
+Route::post('/auth', [AuthController::class, 'auth'])->middleware('throttle:login')->name('auth');
 
 
 Route::middleware('auth')->group(function () {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\Event;
 use App\Exports\EventExport;
+use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cache;
@@ -29,12 +30,15 @@ class EventController extends Controller
      */
     protected ImageService $imageService;
 
+    protected HtmlSanitizer $htmlSanitizer;
+
     /**
      * Create a new controller instance.
      */
-    public function __construct(ImageService $imageService)
+    public function __construct(ImageService $imageService, HtmlSanitizer $htmlSanitizer)
     {
         $this->imageService = $imageService;
+        $this->htmlSanitizer = $htmlSanitizer;
     }
     /**
      * Display a listing of the resource.
@@ -81,6 +85,7 @@ class EventController extends Controller
     {
         try {
             $data = $request->validated();
+            $data = $this->prepareEventData($data);
 
             if ($request->hasFile('image')) {
                 $path = 'image/event/' . date('Y-m');
@@ -140,6 +145,7 @@ class EventController extends Controller
     {
         try {
             $data = $request->validated();
+            $data = $this->prepareEventData($data);
 
             if ($request->hasFile('image')) {
                 // Delete old image and its thumbnail
@@ -388,5 +394,46 @@ class EventController extends Controller
             ]);
             return redirect()->route('event.index')->with('error', 'Gagal mengubah status');
         }
+    }
+
+    /**
+     * Normalize event form data before it is persisted.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function prepareEventData(array $data): array
+    {
+        $benefits = $data['benefits'] ?? [];
+
+        if (is_string($benefits)) {
+            $benefits = preg_split('/\r\n|\r|\n/', $benefits) ?: [];
+        }
+
+        $data['benefits'] = collect($benefits)
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+
+        $data['agenda'] = collect($data['agenda'] ?? [])
+            ->map(fn ($item) => [
+                'time_label' => trim((string) ($item['time_label'] ?? '')),
+                'title' => trim((string) ($item['title'] ?? '')),
+                'description' => trim((string) ($item['description'] ?? '')),
+            ])
+            ->filter(fn ($item) => $item['time_label'] !== '' || $item['title'] !== '' || $item['description'] !== '')
+            ->values()
+            ->all();
+
+        $data['direction'] = isset($data['direction']) && trim((string) $data['direction']) !== ''
+            ? trim((string) $data['direction'])
+            : null;
+
+        if (array_key_exists('deskripsi', $data)) {
+            $data['deskripsi'] = $this->htmlSanitizer->sanitize($data['deskripsi'] ?? null);
+        }
+
+        return $data;
     }
 }

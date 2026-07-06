@@ -259,41 +259,47 @@
                                     </div>
                                 </div>
                                 <div class="container mt-5">
+                                    @php
+                                        $midtransPayments = $payment->where('type', 'midtrans')->values();
+                                    @endphp
                                     <h3 class="mb-4">Metode Pembayaran</h3>
                                     <div class="list-group">
-                                        @foreach ($payment as $index => $item)
+                                        @forelse ($midtransPayments as $index => $item)
                                             <label
                                                 class="list-group-item d-flex justify-content-between align-items-center">
                                                 <input type="radio" name="payment" value="{{ $item->id }}"
                                                     class="form-check-input mx-3"
-                                                    {{ $index === 0 || stripos($item->name, 'qris') !== false ? 'checked' : '' }}>
+                                                    {{ (string) old('payment', $midtransPayments->first()->id) === (string) $item->id ? 'checked' : '' }}>
                                                 <div class="d-flex justify-content-end align-items-center flex-grow-1">
                                                     <img src="{{ asset($item->image) }}" alt="{{ $item->name }}"
                                                         class="me-2" style="width: 110px; height: 40px;">
                                                     <span class="fw-semibold">{{ $item->name }}</span>
                                                 </div>
                                             </label>
-                                        @endforeach
+                                        @empty
+                                            <div class="alert alert-warning mb-0">
+                                                Metode pembayaran Midtrans belum tersedia. Silakan hubungi admin.
+                                            </div>
+                                        @endforelse
                                     </div>
                                 </div>
                                 <script>
                                     function validatePayment() {
                                         const selected = document.querySelector('input[name="payment"]:checked');
                                         if (!selected) {
-                                            // Jika tidak ada metode yang dipilih
                                             Swal.fire({
                                                 icon: 'warning',
                                                 title: 'Metode Pembayaran Belum Dipilih!',
-                                                text: 'Silakan pilih salah satu metode pembayaran.',
+                                                text: 'Silakan pilih metode pembayaran Midtrans.',
                                                 toast: true,
                                                 position: 'top-end',
                                                 timer: 3000,
                                                 showConfirmButton: false
 
                                             });
-                                            return false; // mencegah form submit
+                                            return false;
                                         }
-                                        return true; // izinkan submit jika sudah dipilih
+                                        return true;
                                     }
                                 </script>
                             </div>

@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\SendTicket;
 use App\Models\Transaksi;
 use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\SendTicket;
 
 /**
  * Class MidtransController
@@ -36,7 +37,7 @@ class MidtransController extends Controller
             ->where('invoice', $invoice)
             ->first();
 
-        if (!$transaksi) {
+        if (! $transaksi) {
             return redirect('/')->with('error', 'Transaksi tidak ditemukan.');
         }
 
@@ -49,31 +50,33 @@ class MidtransController extends Controller
      *
      * Midtrans mengirim HTTP POST ke sini setiap kali status pembayaran berubah.
      */
-    public function notification(): JsonResponse
+    public function notification(Request $request): JsonResponse
     {
         try {
-            $notif = $this->midtransService->parseNotification();
+            $notif = $this->midtransService->parseNotification($request);
 
-            $invoice           = $notif['order_id'];
+            $invoice = $notif['order_id'];
             $transactionStatus = $notif['transaction_status'];
-            $fraudStatus       = $notif['fraud_status'];
+            $fraudStatus = $notif['fraud_status'];
 
             $newStatus = $this->midtransService->resolveStatus($transactionStatus, $fraudStatus);
 
             if ($newStatus === null) {
                 Log::info('Midtrans: status tidak dikenali, diabaikan', [
-                    'invoice'            => $invoice,
+                    'invoice' => $invoice,
                     'transaction_status' => $transactionStatus,
                 ]);
+
                 return response()->json(['message' => 'Status not handled'], 200);
             }
 
             $transaksi = Transaksi::with(['volunteers', 'event'])->where('invoice', $invoice)->first();
 
-            if (!$transaksi) {
+            if (! $transaksi) {
                 Log::warning('Midtrans notification: transaksi tidak ditemukan', [
                     'invoice' => $invoice,
                 ]);
+
                 return response()->json(['message' => 'Transaction not found'], 404);
             }
 
@@ -82,6 +85,7 @@ class MidtransController extends Controller
                 Log::info('Midtrans: transaksi sudah Success, notifikasi diabaikan', [
                     'invoice' => $invoice,
                 ]);
+
                 return response()->json(['message' => 'Already processed'], 200);
             }
 
@@ -96,34 +100,35 @@ class MidtransController extends Controller
                             Mail::to($volunteer->email)->send(
                                 new SendTicket(
                                     $transaksi->invoice,
-                                    url('/tiket/' . $transaksi->invoice)
+                                    $this->ticketUrl($transaksi)
                                 )
                             );
                         } catch (\Exception $e) {
                             $failedEmails[] = $volunteer->email;
                             Log::error('Midtrans: gagal kirim email tiket', [
-                                'invoice'         => $invoice,
+                                'invoice' => $invoice,
                                 'volunteer_email' => $volunteer->email,
-                                'error'           => $e->getMessage(),
+                                'error' => $e->getMessage(),
                             ]);
                         }
                     }
 
                     // Jika ada email yang gagal, rollback dan jangan ubah status
-                    if (!empty($failedEmails)) {
+                    if (! empty($failedEmails)) {
                         DB::rollBack();
                         Log::error('Midtrans: rollback karena email gagal', [
-                            'invoice'       => $invoice,
+                            'invoice' => $invoice,
                             'failed_emails' => $failedEmails,
                         ]);
+
                         return response()->json([
-                            'message'       => 'Email delivery failed',
+                            'message' => 'Email delivery failed',
                             'failed_emails' => $failedEmails,
                         ], 500);
                     }
 
                     $transaksi->update([
-                        'status_pembayaran'  => 'Success',
+                        'status_pembayaran' => 'Success',
                         'tanggal_pembayaran' => now(),
                     ]);
 
@@ -148,6 +153,7 @@ class MidtransController extends Controller
                 } elseif ($newStatus === 'Pending') {
                     // Tidak perlu update jika sudah pending
                     DB::rollBack();
+
                     return response()->json(['message' => 'Still pending'], 200);
                 }
 
@@ -159,8 +165,9 @@ class MidtransController extends Controller
                 DB::rollBack();
                 Log::error('Midtrans: error saat proses notifikasi', [
                     'invoice' => $invoice,
-                    'error'   => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
+
                 return response()->json(['message' => 'Internal server error'], 500);
             }
 
@@ -168,7 +175,19 @@ class MidtransController extends Controller
             Log::error('Midtrans: gagal parse notifikasi', [
                 'error' => $e->getMessage(),
             ]);
+
             return response()->json(['message' => 'Failed to parse notification'], 400);
         }
+    }
+
+    private function ticketUrl(Transaksi $transaksi): string
+    {
+        $url = url('/tiket/'.$transaksi->invoice);
+
+        if (! empty($transaksi->public_token)) {
+            $url .= '?token='.urlencode($transaksi->public_token);
+        }
+
+        return $url;
     }
 }

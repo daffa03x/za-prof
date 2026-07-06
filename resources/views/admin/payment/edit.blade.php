@@ -45,6 +45,42 @@
                                 <small class="text-muted">Pilih <strong>Midtrans</strong> untuk pembayaran otomatis via Snap.</small>
                             </div>
 
+                            {{-- Midtrans Channel --}}
+                            <div class="mb-3">
+                                <label for="midtrans_payment_type" class="form-label fw-semibold">Channel Midtrans</label>
+                                <select name="midtrans_payment_type" id="midtrans_payment_type" class="form-select @error('midtrans_payment_type') is-invalid @enderror">
+                                    @php($currentChannel = old('midtrans_payment_type', $payment->midtrans_payment_type ?? ''))
+                                    <option value="">— Kosongkan untuk kartu kredit / Snap popup —</option>
+                                    <option value="bank_transfer" {{ $currentChannel === 'bank_transfer' ? 'selected' : '' }}>Virtual Account (Bank Transfer)</option>
+                                    <option value="echannel" {{ $currentChannel === 'echannel' ? 'selected' : '' }}>Mandiri Bill Payment</option>
+                                    <option value="gopay" {{ $currentChannel === 'gopay' ? 'selected' : '' }}>GoPay</option>
+                                    <option value="shopeepay" {{ $currentChannel === 'shopeepay' ? 'selected' : '' }}>ShopeePay</option>
+                                    <option value="qris" {{ $currentChannel === 'qris' ? 'selected' : '' }}>QRIS</option>
+                                </select>
+                                @error('midtrans_payment_type')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted">Tampilan instruksi bayar custom (bukan modal Midtrans) hanya berlaku jika channel dipilih di sini.</small>
+                            </div>
+
+                            {{-- Midtrans Bank (hanya untuk Virtual Account) --}}
+                            <div class="mb-3">
+                                <label for="midtrans_bank" class="form-label fw-semibold">Bank VA</label>
+                                <select name="midtrans_bank" id="midtrans_bank" class="form-select @error('midtrans_bank') is-invalid @enderror">
+                                    @php($currentBank = old('midtrans_bank', $payment->midtrans_bank ?? ''))
+                                    <option value="">—</option>
+                                    <option value="bca" {{ $currentBank === 'bca' ? 'selected' : '' }}>BCA</option>
+                                    <option value="bni" {{ $currentBank === 'bni' ? 'selected' : '' }}>BNI</option>
+                                    <option value="bri" {{ $currentBank === 'bri' ? 'selected' : '' }}>BRI</option>
+                                    <option value="permata" {{ $currentBank === 'permata' ? 'selected' : '' }}>Permata</option>
+                                    <option value="cimb" {{ $currentBank === 'cimb' ? 'selected' : '' }}>CIMB Niaga</option>
+                                </select>
+                                @error('midtrans_bank')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted">Wajib diisi jika Channel Midtrans = Virtual Account.</small>
+                            </div>
+
                             {{-- Payment Name --}}
                             <x-form-input name="name" label="Nama Payment" placeholder="Contoh: BCA, Mandiri, GoPay"
                                 :value="$payment->name" :required="true" />

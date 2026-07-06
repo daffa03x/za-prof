@@ -34,6 +34,8 @@ class Payment extends Model
         'name',
         'no_rek',
         'type',
+        'midtrans_payment_type',
+        'midtrans_bank',
         'image',
         'status',
     ];
@@ -61,6 +63,6 @@ class Payment extends Model
      */
     public function transaksis(): HasMany
     {
-        return $this->hasMany(Transaksi::class, 'payment_id');
+        return $this->hasMany(Transaksi::class, 'id_payment');
     }
 }
