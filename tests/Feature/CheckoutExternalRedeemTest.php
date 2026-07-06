@@ -28,7 +28,7 @@ class CheckoutExternalRedeemTest extends TestCase
 
     public function test_external_voucher_redeem_success_saves_transaction(): void
     {
-        config(['services.chatkebaikan.redeem_url' => 'http://chatkebaikan.raihmimpi.id/api/dr/voucher/redeem']);
+        config(['services.chatkebaikan.redeem_url' => 'https://chatkebaikan.raihmimpi.id/api/dr/voucher/redeem']);
         Http::fake(['*redeem*' => Http::response(['ok' => true], 200)]);
 
         $event = Event::factory()->create(['harga' => 200000, 'jumlah_tiket' => 10]);
@@ -50,7 +50,7 @@ class CheckoutExternalRedeemTest extends TestCase
 
     public function test_external_voucher_redeem_failure_rolls_back(): void
     {
-        config(['services.chatkebaikan.redeem_url' => 'http://chatkebaikan.raihmimpi.id/api/dr/voucher/redeem']);
+        config(['services.chatkebaikan.redeem_url' => 'https://chatkebaikan.raihmimpi.id/api/dr/voucher/redeem']);
         Http::fake(['*redeem*' => Http::response('', 500)]);
 
         $event = Event::factory()->create(['harga' => 200000, 'jumlah_tiket' => 10]);

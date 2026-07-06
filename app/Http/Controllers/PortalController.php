@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -79,7 +80,7 @@ class PortalController extends Controller
         
         // Cache payment methods for 30 minutes (rarely changes)
         $payment = Cache::remember('active_payment_methods', 1800, function () {
-            return Payment::select(['id', 'name', 'image', 'no_rek', 'type'])
+            return Payment::select(['id', 'name', 'image', 'no_rek', 'type', 'midtrans_payment_type', 'midtrans_bank'])
                 ->where('status', true)
                 ->orderBy('id')
                 ->get();
@@ -94,7 +95,7 @@ class PortalController extends Controller
     public function transaksiPost(Request $request, string $slug): RedirectResponse
     {
         $request->validate([
-            'jumlah_tiket'         => 'required|integer|min:1',
+            'jumlah_tiket'         => 'required|integer|min:1|max:3',
             'payment'              => ['required', Rule::exists('payments', 'id')->where(fn ($q) =>
                 $q->where('status', true)->where('type', 'midtrans')
             )],
@@ -117,9 +118,17 @@ class PortalController extends Controller
             'payment.exists'                => 'Metode pembayaran tidak tersedia. Silakan pilih pembayaran Midtrans.',
         ]);
 
+        if (count($request->input('pengunjung', [])) !== (int) $request->jumlah_tiket) {
+            throw ValidationException::withMessages([
+                'pengunjung' => 'Jumlah data volunteer harus sama dengan jumlah tiket.',
+            ]);
+        }
+
         try {
             $event   = Event::where('slug', $slug)->firstOrFail();
-            $payment = Payment::findOrFail($request->payment);
+            $payment = Payment::where('status', true)
+                ->where('type', 'midtrans')
+                ->findOrFail($request->payment);
 
             $transaksi = app(CheckoutService::class)->process(
                 $event,
@@ -129,7 +138,9 @@ class PortalController extends Controller
                 $request->voucher_code
             );
 
-            return redirect("/invoice/{$transaksi->invoice}")->with('success', 'Transaksi berhasil');
+            return redirect()
+                ->route('invoice', ['invoice' => $transaksi->invoice, 'token' => $transaksi->public_token])
+                ->with('success', 'Transaksi berhasil');
         } catch (\Exception $e) {
             Log::error('Transaction failed via portal', [
                 'event_slug' => $slug,
@@ -144,7 +155,7 @@ class PortalController extends Controller
     /**
      * Display invoice.
      */
-    public function invoice(string $invoice): View|RedirectResponse
+    public function invoice(Request $request, string $invoice): View|RedirectResponse
     {
         $data = Transaksi::with(['event', 'payment', 'volunteers'])
             ->where('invoice', $invoice)
@@ -154,8 +165,15 @@ class PortalController extends Controller
             return view('portal.error_tiket');
         }
 
+        if (! $this->canAccessPublicTransaction($request, $data)) {
+            return view('portal.error_tiket');
+        }
+
         if ($data->status_pembayaran === 'Success') {
-            return redirect()->route('portal.tiket', $data->invoice);
+            return redirect()->route('portal.tiket', [
+                'invoice' => $data->invoice,
+                'token' => $data->public_token,
+            ]);
         }
 
         if (!$data->canAccessInvoice()) {
@@ -180,14 +198,14 @@ class PortalController extends Controller
     /**
      * Display ticket.
      */
-    public function tiket(string $invoice): View
+    public function tiket(Request $request, string $invoice): View
     {
         $transaksi = Transaksi::with(['event', 'volunteers'])
             ->where('invoice', $invoice)
             ->where('status_pembayaran', 'Success')
             ->first();
 
-        if (!$transaksi) {
+        if (!$transaksi || ! $this->canAccessPublicTransaction($request, $transaksi)) {
             return view('portal.error_tiket');
         }
 
@@ -339,5 +357,13 @@ class PortalController extends Controller
         return $this->respondWithLocalVoucher($voucher);
     }
 
-}
+    private function canAccessPublicTransaction(Request $request, Transaksi $transaksi): bool
+    {
+        if (empty($transaksi->public_token)) {
+            return true;
+        }
 
+        return $transaksi->hasPublicToken((string) $request->query('token', ''));
+    }
+
+}

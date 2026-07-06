@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 /**
  * Class Transaksi
@@ -60,6 +61,7 @@ class Transaksi extends Model
         'tanggal_pembayaran',
         'id_payment',
         'id_voucher',
+        'public_token',
         'snap_token',
         'payment_instructions',
     ];
@@ -71,6 +73,7 @@ class Transaksi extends Model
      */
     protected $hidden = [
         'deleted_at',
+        'public_token',
     ];
 
     /**
@@ -86,6 +89,15 @@ class Transaksi extends Model
         'status_pembayaran' => 'string',
         'payment_instructions' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Transaksi $transaksi): void {
+            if (empty($transaksi->public_token)) {
+                $transaksi->public_token = self::generatePublicToken();
+            }
+        });
+    }
 
     /**
      * Get the route key for the model.
@@ -109,6 +121,24 @@ class Transaksi extends Model
         }
 
         return Carbon::parse($this->tanggal_register)->greaterThanOrEqualTo(now()->subDay());
+    }
+
+    public static function generatePublicToken(): string
+    {
+        do {
+            $token = Str::random(48);
+        } while (self::withTrashed()->where('public_token', $token)->exists());
+
+        return $token;
+    }
+
+    public function hasPublicToken(string $token): bool
+    {
+        if (empty($this->public_token) || $token === '') {
+            return false;
+        }
+
+        return hash_equals($this->public_token, $token);
     }
 
     /**

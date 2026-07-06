@@ -63,6 +63,6 @@ class Payment extends Model
      */
     public function transaksis(): HasMany
     {
-        return $this->hasMany(Transaksi::class, 'payment_id');
+        return $this->hasMany(Transaksi::class, 'id_payment');
     }
 }

@@ -14,7 +14,6 @@ class TransaksiStatusResource extends JsonResource
             'status_pembayaran' => $this->status_pembayaran,
             'total_pembayaran'  => $this->total_pembayaran,
             'jumlah_tiket'      => $this->jumlah_tiket,
-            'snap_token'        => $this->snap_token,
             'payment_channel'      => $this->payment?->midtrans_payment_type,
             'payment_instructions' => $this->payment_instructions,
             'event'             => $this->whenLoaded('event', fn () => [

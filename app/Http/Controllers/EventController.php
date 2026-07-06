@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\Event;
 use App\Exports\EventExport;
+use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cache;
@@ -29,12 +30,15 @@ class EventController extends Controller
      */
     protected ImageService $imageService;
 
+    protected HtmlSanitizer $htmlSanitizer;
+
     /**
      * Create a new controller instance.
      */
-    public function __construct(ImageService $imageService)
+    public function __construct(ImageService $imageService, HtmlSanitizer $htmlSanitizer)
     {
         $this->imageService = $imageService;
+        $this->htmlSanitizer = $htmlSanitizer;
     }
     /**
      * Display a listing of the resource.
@@ -425,6 +429,10 @@ class EventController extends Controller
         $data['direction'] = isset($data['direction']) && trim((string) $data['direction']) !== ''
             ? trim((string) $data['direction'])
             : null;
+
+        if (array_key_exists('deskripsi', $data)) {
+            $data['deskripsi'] = $this->htmlSanitizer->sanitize($data['deskripsi'] ?? null);
+        }
 
         return $data;
     }
