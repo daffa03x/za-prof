@@ -100,7 +100,7 @@ class MidtransController extends Controller
                             Mail::to($volunteer->email)->send(
                                 new SendTicket(
                                     $transaksi->invoice,
-                                    url('/tiket/'.$transaksi->invoice)
+                                    $this->ticketUrl($transaksi)
                                 )
                             );
                         } catch (\Exception $e) {
@@ -178,5 +178,16 @@ class MidtransController extends Controller
 
             return response()->json(['message' => 'Failed to parse notification'], 400);
         }
+    }
+
+    private function ticketUrl(Transaksi $transaksi): string
+    {
+        $url = url('/tiket/'.$transaksi->invoice);
+
+        if (! empty($transaksi->public_token)) {
+            $url .= '?token='.urlencode($transaksi->public_token);
+        }
+
+        return $url;
     }
 }

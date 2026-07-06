@@ -18,8 +18,9 @@ class EventListResource extends JsonResource
             'waktu_mulai' => $this->waktu_mulai?->toIso8601String(),
             'kota'        => $this->kota,
             'mitra'       => $this->mitra,
-            'status'      => $this->status,
-            'sisa_tiket'  => $this->jumlah_tiket,
+            'status'      => $this->isActive(),
+            'sisa_tiket'  => $this->remainingTickets(),
+            'is_sold_out' => $this->isSoldOut(),
         ];
     }
 }

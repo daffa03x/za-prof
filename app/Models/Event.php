@@ -29,6 +29,8 @@ use Illuminate\Support\Str;
  * @property string|null $direction
  * @property string|null $kota
  * @property int $jumlah_tiket
+ * @property int $remaining_tickets
+ * @property bool $is_sold_out
  * @property int $harga
  * @property string|null $image
  * @property \Carbon\Carbon|null $created_at
@@ -141,6 +143,42 @@ class Event extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    /**
+     * Check active status defensively because some imports may use Y/N values.
+     */
+    public function isActive(): bool
+    {
+        $status = $this->getRawOriginal('status');
+
+        if ($status === null && array_key_exists('status', $this->attributes)) {
+            $status = $this->attributes['status'];
+        }
+
+        if (is_string($status)) {
+            $normalized = strtolower(trim($status));
+
+            return in_array($normalized, ['1', 'y', 'yes', 'true', 'aktif', 'active'], true);
+        }
+
+        return (bool) $status;
+    }
+
+    /**
+     * Remaining ticket stock. Checkout already decrements this field atomically.
+     */
+    public function remainingTickets(): int
+    {
+        return max(0, (int) $this->jumlah_tiket);
+    }
+
+    /**
+     * Public sold-out state: inactive events and empty stock are not purchasable.
+     */
+    public function isSoldOut(): bool
+    {
+        return ! $this->isActive() || $this->remainingTickets() <= 0;
     }
 
     /**

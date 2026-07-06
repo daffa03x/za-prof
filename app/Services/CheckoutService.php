@@ -32,13 +32,22 @@ class CheckoutService
         DB::beginTransaction();
 
         try {
+            if (! $payment->status || $payment->type !== 'midtrans') {
+                throw new \Exception('Metode pembayaran tidak tersedia.');
+            }
+
+            if (! $event->isActive()) {
+                throw new \Exception('Event sudah sold out.');
+            }
+
             // 1. Potong stok secara atomik
             $affected = Event::where('id', $event->id)
+                ->where('status', true)
                 ->where('jumlah_tiket', '>=', $jumlahTiket)
                 ->decrement('jumlah_tiket', $jumlahTiket);
 
             if ($affected === 0) {
-                throw new \Exception('Tiket tidak mencukupi atau event tidak valid.');
+                throw new \Exception('Tiket sudah sold out atau jumlah tiket tidak mencukupi.');
             }
 
             // 2. Proses voucher
@@ -51,6 +60,7 @@ class CheckoutService
                     ->where('id_event', $event->id)
                     ->where('status', true)
                     ->where('tanggal_kadaluarsa', '>=', now()->startOfDay())
+                    ->lockForUpdate()
                     ->first();
 
                 if ($appliedVoucher) {
@@ -103,32 +113,8 @@ class CheckoutService
                 $this->redeemExternalVoucher($appliedVoucher, $transaksi);
             }
 
-            // 7. Generate instruksi pembayaran (non-fatal jika gagal)
-            if ($payment->type === 'midtrans' && $payment->midtrans_payment_type) {
-                try {
-                    $transaksi->load('event');
-                    $instructions = $this->midtransService->charge($transaksi, $payment);
-                    $transaksi->update(['payment_instructions' => $instructions]);
-                    $transaksi->payment_instructions = $instructions;
-                } catch (\Exception $e) {
-                    Log::error('Gagal membuat charge Midtrans Core API', [
-                        'invoice' => $transaksi->invoice,
-                        'error'   => $e->getMessage(),
-                    ]);
-                }
-            } elseif ($payment->type === 'midtrans') {
-                try {
-                    $transaksi->load('event');
-                    $snapToken = $this->midtransService->createSnapToken($transaksi);
-                    $transaksi->update(['snap_token' => $snapToken]);
-                    $transaksi->snap_token = $snapToken;
-                } catch (\Exception $e) {
-                    Log::error('Gagal membuat Snap token Midtrans', [
-                        'invoice' => $transaksi->invoice,
-                        'error'   => $e->getMessage(),
-                    ]);
-                }
-            }
+            // 7. Generate instruksi pembayaran. Harus sukses agar transaksi tidak tersimpan tanpa jalur bayar.
+            $this->createPaymentInstrument($transaksi, $payment);
 
             DB::commit();
 
@@ -158,6 +144,59 @@ class CheckoutService
             $phone = '62' . $phone;
         }
         return '+' . $phone;
+    }
+
+    private function createPaymentInstrument(Transaksi $transaksi, Payment $payment): void
+    {
+        try {
+            $transaksi->load('event');
+
+            if ($payment->midtrans_payment_type) {
+                $instructions = $this->midtransService->charge($transaksi, $payment);
+                $this->assertPaymentInstructions($payment, $instructions);
+
+                $transaksi->update(['payment_instructions' => $instructions]);
+                $transaksi->payment_instructions = $instructions;
+
+                return;
+            }
+
+            $snapToken = $this->midtransService->createSnapToken($transaksi);
+            if (! is_string($snapToken) || trim($snapToken) === '') {
+                throw new \RuntimeException('Midtrans Snap token kosong.');
+            }
+
+            $transaksi->update(['snap_token' => $snapToken]);
+            $transaksi->snap_token = $snapToken;
+        } catch (\Throwable $e) {
+            Log::error('Gagal membuat instruksi pembayaran Midtrans', [
+                'invoice' => $transaksi->invoice,
+                'channel' => $payment->midtrans_payment_type,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new \Exception('Gagal membuat instruksi pembayaran. Silakan coba lagi.');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $instructions
+     */
+    private function assertPaymentInstructions(Payment $payment, array $instructions): void
+    {
+        $channel = $payment->midtrans_payment_type;
+
+        $missing = match ($channel) {
+            'bank_transfer' => empty($instructions['bank']) || empty($instructions['va_number']),
+            'echannel' => empty($instructions['bill_key']) || empty($instructions['biller_code']),
+            'qris' => empty($instructions['qr_url']),
+            'gopay', 'shopeepay' => empty($instructions['deeplink_url']) && empty($instructions['qr_url']),
+            default => true,
+        };
+
+        if ($missing) {
+            throw new \RuntimeException("Instruksi pembayaran Midtrans tidak lengkap untuk channel {$channel}.");
+        }
     }
 
     private function redeemExternalVoucher(KodeVoucher $voucher, Transaksi $transaksi): void
