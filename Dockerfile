@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Stage 1: PHP dependencies ----------
-FROM php:8.3-cli-alpine AS vendor
+FROM php:8.3-cli-bookworm AS vendor
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
 RUN install-php-extensions gd zip mbstring pdo_mysql bcmath
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -25,9 +25,11 @@ COPY . .
 RUN npm run build
 
 # ---------- Stage 3: application runtime ----------
-FROM php:8.3-fpm-alpine AS app
+FROM php:8.3-fpm-bookworm AS app
 
-RUN apk add --no-cache nginx supervisor
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nginx supervisor \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
 RUN install-php-extensions pdo_mysql mbstring exif pcntl bcmath gd intl zip curl opcache
 
