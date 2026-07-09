@@ -2,18 +2,8 @@
 
 # ---------- Stage 1: PHP dependencies ----------
 FROM php:8.3-cli-alpine AS vendor
-RUN apk add --no-cache \
-        freetype-dev \
-        libpng-dev \
-        libjpeg-turbo-dev \
-        libzip-dev \
-        icu-dev \
-        oniguruma-dev \
-        autoconf \
-        g++ \
-        make \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" gd zip intl mbstring pdo_mysql bcmath
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
+RUN install-php-extensions gd zip mbstring pdo_mysql bcmath
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 COPY composer.json composer.lock ./
@@ -37,42 +27,9 @@ RUN npm run build
 # ---------- Stage 3: application runtime ----------
 FROM php:8.3-fpm-alpine AS app
 
-RUN apk add --no-cache \
-        nginx \
-        supervisor \
-        freetype \
-        libpng \
-        libjpeg-turbo \
-        libzip \
-        icu-libs \
-        libxml2 \
-        oniguruma \
-        curl \
-    && apk add --no-cache --virtual .build-deps \
-        freetype-dev \
-        libpng-dev \
-        libjpeg-turbo-dev \
-        libzip-dev \
-        icu-dev \
-        libxml2-dev \
-        oniguruma-dev \
-        curl-dev \
-        autoconf \
-        g++ \
-        make \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" \
-        pdo_mysql \
-        mbstring \
-        exif \
-        pcntl \
-        bcmath \
-        gd \
-        intl \
-        zip \
-        curl \
-        opcache \
-    && apk del .build-deps
+RUN apk add --no-cache nginx supervisor
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
+RUN install-php-extensions pdo_mysql mbstring exif pcntl bcmath gd intl zip curl opcache
 
 WORKDIR /var/www/html
 
