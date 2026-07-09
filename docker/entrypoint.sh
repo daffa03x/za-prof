@@ -3,6 +3,8 @@ set -e
 
 cd /var/www/html
 
+sed "s/PORT_PLACEHOLDER/${PORT:-80}/" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+
 if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env
 fi
