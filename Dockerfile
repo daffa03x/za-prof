@@ -44,12 +44,12 @@ RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessio
     && chmod -R 775 storage bootstrap/cache
 
 COPY docker/php.ini /usr/local/etc/php/conf.d/99-app.ini
-COPY docker/nginx.conf /etc/nginx/nginx.conf.template
 COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 80
+# Railway routes to $PORT; entrypoint writes nginx.conf with correct port at runtime
+EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
