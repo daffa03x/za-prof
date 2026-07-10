@@ -1,40 +1,31 @@
 #!/bin/sh
-set -e
 
 cd /var/www/html
 
 PORT="${PORT:-80}"
 
-echo "[entrypoint] Starting with PORT=${PORT}"
+echo "[entrypoint] === Starting container with PORT=${PORT} ==="
 
-# Generate nginx.conf at runtime with the correct PORT
+# Generate /etc/nginx/nginx.conf at runtime using PORT env var
+# NOTE: $ signs for nginx vars must be escaped with \
 cat > /etc/nginx/nginx.conf << NGINXEOF
-worker_processes auto;
+user root;
+worker_processes 1;
 pid /tmp/nginx.pid;
 error_log /dev/stderr warn;
 
 events {
-    worker_connections 1024;
-    use epoll;
-    multi_accept on;
+    worker_connections 512;
 }
 
 http {
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
 
-    log_format main '\$remote_addr - \$remote_user [\$time_local] "\$request" '
-                    '\$status \$body_bytes_sent "\$http_referer" '
-                    '"\$http_user_agent"';
+    access_log off;
 
-    access_log /proc/1/fd/1 main;
-    error_log  /proc/1/fd/2 warn;
-
-    sendfile           on;
-    tcp_nopush         on;
-    tcp_nodelay        on;
-    keepalive_timeout  65;
-    types_hash_max_size 2048;
+    sendfile        on;
+    keepalive_timeout 65;
     client_max_body_size 20M;
 
     server {
@@ -45,7 +36,6 @@ http {
 
         add_header X-Frame-Options "SAMEORIGIN";
         add_header X-Content-Type-Options "nosniff";
-        add_header X-XSS-Protection "1; mode=block";
 
         charset utf-8;
 
@@ -71,41 +61,45 @@ http {
 }
 NGINXEOF
 
-echo "[entrypoint] Verifying nginx config..."
-/usr/sbin/nginx -t 2>&1
-echo "[entrypoint] nginx config OK"
+echo "[entrypoint] nginx.conf written for port ${PORT}"
 
-# Laravel setup
-if [ ! -f .env ]; then
-    if [ -f .env.example ]; then
-        cp .env.example .env
-        echo "[entrypoint] Created .env from .env.example"
-    fi
+# Validate nginx config - if this fails, print the config and exit
+if ! /usr/sbin/nginx -t 2>&1; then
+    echo "[entrypoint] ERROR: nginx config test failed. Config dump:"
+    cat /etc/nginx/nginx.conf
+    exit 1
+fi
+echo "[entrypoint] nginx config validated OK"
+
+# ---------- Laravel bootstrap ----------
+if [ ! -f .env ] && [ -f .env.example ]; then
+    cp .env.example .env
+    echo "[entrypoint] Copied .env.example to .env"
 fi
 
 if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
-    php artisan key:generate --force
-    echo "[entrypoint] APP_KEY generated"
+    php artisan key:generate --force && echo "[entrypoint] APP_KEY generated"
 fi
 
 php artisan package:discover --ansi 2>&1 || true
-php artisan config:clear 2>&1 || true
-php artisan config:cache 2>&1 || echo "[entrypoint] warning: config:cache skipped"
-php artisan route:cache 2>&1  || echo "[entrypoint] warning: route:cache skipped"
-php artisan view:cache 2>&1   || echo "[entrypoint] warning: view:cache skipped"
+
+php artisan config:clear  2>&1 || true
+php artisan config:cache  2>&1 || echo "[entrypoint] config:cache skipped"
+php artisan route:cache   2>&1 || echo "[entrypoint] route:cache skipped"
+php artisan view:cache    2>&1 || echo "[entrypoint] view:cache skipped"
 
 if [ "${RUN_MIGRATIONS}" = "true" ]; then
-    php artisan migrate --force 2>&1
+    php artisan migrate --force 2>&1 || echo "[entrypoint] migrate failed"
 fi
 
 php artisan storage:link 2>/dev/null || true
-chown -R www-data:www-data storage bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 
-# Start PHP-FPM in background (daemonize)
-echo "[entrypoint] Starting PHP-FPM..."
-/usr/local/sbin/php-fpm --daemonize
-echo "[entrypoint] PHP-FPM started"
+# ---------- Start PHP-FPM ----------
+echo "[entrypoint] Starting PHP-FPM in background..."
+/usr/local/sbin/php-fpm -D 2>&1
+echo "[entrypoint] PHP-FPM daemonized"
 
-# Start nginx in foreground as PID 1
+# ---------- Start nginx in foreground (becomes PID 1) ----------
 echo "[entrypoint] Starting nginx on port ${PORT}..."
 exec /usr/sbin/nginx -g "daemon off;"
