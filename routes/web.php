@@ -63,7 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
 
     // Status Update
-    Route::post('/transaksi/update', [TransaksiController::class, 'updateStatus'])->name('transaksi.update');
+    Route::post('/transaksi/update', [TransaksiController::class, 'updateStatus'])->name('transaksi.update-status');
     Route::put('/event/update-status/{event}', [EventController::class, 'updateStatus'])->name('event.update.status');
 
     // Event - Soft Delete Management
