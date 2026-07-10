@@ -33,8 +33,8 @@ Route::get('/view_content/{slug}', [PortalController::class, 'viewContent'])->na
 Route::get('/checkout/{slug}', [PortalController::class, 'checkout'])->name('checkout');
 Route::get('/invoice/{invoice}', [PortalController::class, 'invoice'])->name('invoice');
 Route::post('/transaksi/post/{slug}', [PortalController::class, 'transaksiPost'])->name('transaksi.post');
-Route::get('/event-sostrip', [PortalController::class, 'program'])->name('event.sostrip');
-Route::get('/portal/search', [PortalController::class, 'eventSearch'])->name('portal.search');
+// Route::get('/event-sostrip', [PortalController::class, 'program'])->name('event.sostrip');
+// Route::get('/portal/search', [PortalController::class, 'eventSearch'])->name('portal.search');
 Route::get('/tiket/{invoice}', [PortalController::class, 'tiket'])->name('portal.tiket');
 
 
