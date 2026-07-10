@@ -28,7 +28,7 @@ RUN npm run build
 FROM php:8.3-fpm-bookworm AS app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends nginx supervisor \
+    && apt-get install -y --no-install-recommends nginx \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
 RUN install-php-extensions pdo_mysql mbstring exif pcntl bcmath gd intl zip curl opcache
@@ -44,12 +44,10 @@ RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessio
     && chmod -R 775 storage bootstrap/cache
 
 COPY docker/php.ini /usr/local/etc/php/conf.d/99-app.ini
-COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Railway routes to $PORT; entrypoint writes nginx.conf with correct port at runtime
+# Railway routes traffic to $PORT (set dynamically by Railway)
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
