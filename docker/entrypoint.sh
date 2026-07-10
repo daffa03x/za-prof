@@ -13,6 +13,8 @@ if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
     php artisan key:generate --force
 fi
 
+php artisan package:discover --ansi
+
 php artisan config:clear
 php artisan config:cache || echo "warning: config:cache failed, continuing without cached config"
 php artisan route:cache || echo "warning: route:cache failed, continuing without cached routes"
