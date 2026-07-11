@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Event;
+use App\Models\Transaksi;
 use Illuminate\View\View;
 
 /**
@@ -18,6 +20,16 @@ class DashboardController extends Controller
     {
         $title = 'Dashboard';
 
-        return view('admin.dashboard.index', compact('title'));
+        $stats = [
+            'events'            => Event::count(),
+            'transaksi_total'   => Transaksi::count(),
+            'transaksi_sukses'  => Transaksi::where('status_pembayaran', 'Success')->count(),
+            'transaksi_pending' => Transaksi::where('status_pembayaran', 'Pending')->count(),
+            'pendapatan'        => (int) Transaksi::where('status_pembayaran', 'Success')->sum('total_pembayaran'),
+        ];
+
+        $recent = Transaksi::latest('id')->take(6)->get();
+
+        return view('admin.dashboard.index', compact('title', 'stats', 'recent'));
     }
 }
