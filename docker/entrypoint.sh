@@ -95,10 +95,54 @@ fi
 php artisan storage:link 2>/dev/null || true
 chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 
+# ---------- Persistent uploads (Railway Volume di-mount ke /var/www/html/public/image) ----------
+# Volume ter-mount sebagai root, jadi folder harus dibuat & di-set writable oleh www-data saat start.
+mkdir -p public/image
+chown -R www-data:www-data public/image 2>/dev/null || true
+chmod -R 775 public/image 2>/dev/null || true
+echo "[entrypoint] public/image ready for uploads"
+
+# ---------- Seed gambar lama ke volume (sekali saja) ----------
+# Taruh arsip lama di docker/seed/images.tar.gz. Isinya harus relatif terhadap public/image,
+# mis. berisi folder event/2026-07/xxx.png (bukan public/image/event/...).
+if [ -f docker/seed/images.tar.gz ] && [ ! -f public/image/.seeded ]; then
+    echo "[entrypoint] Seeding gambar lama ke volume..."
+    if tar -xzf docker/seed/images.tar.gz -C public/image; then
+        # Kompat: bila arsip ternyata berisi folder image/ di dalamnya, ratakan strukturnya.
+        if [ -d public/image/image ]; then
+            cp -rn public/image/image/. public/image/ 2>/dev/null || true
+            rm -rf public/image/image
+        fi
+        touch public/image/.seeded
+        chown -R www-data:www-data public/image 2>/dev/null || true
+        echo "[entrypoint] Seed gambar lama selesai"
+    else
+        echo "[entrypoint] WARN: gagal extract seed images"
+    fi
+fi
+
 # ---------- Start PHP-FPM ----------
 echo "[entrypoint] Starting PHP-FPM in background..."
 /usr/local/sbin/php-fpm -D 2>&1
 echo "[entrypoint] PHP-FPM daemonized"
+
+# ---------- Queue worker (email tiket & job async lain) ----------
+# Worker digabung di container web (bukan service terpisah). Dijalankan di background dengan
+# loop restart supaya bila worker mati/di-kill, otomatis hidup lagi. Butuh QUEUE_CONNECTION=database
+# dan tabel `jobs` (jalankan migrate). Job yang tetap gagal setelah semua retry masuk ke failed_jobs.
+if [ "${QUEUE_CONNECTION:-database}" != "sync" ]; then
+    echo "[entrypoint] Starting queue worker in background..."
+    (
+        while true; do
+            php artisan queue:work --queue=default --sleep=3 --tries=5 --max-time=3600 --backoff=60 2>&1
+            echo "[entrypoint] queue worker exited, restarting in 3s..."
+            sleep 3
+        done
+    ) &
+    echo "[entrypoint] queue worker launched"
+else
+    echo "[entrypoint] QUEUE_CONNECTION=sync, queue worker not started"
+fi
 
 # ---------- Start nginx in foreground (becomes PID 1) ----------
 echo "[entrypoint] Starting nginx on port ${PORT}..."

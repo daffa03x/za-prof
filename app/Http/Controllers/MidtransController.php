@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\SendTicket;
 use App\Models\Transaksi;
+use App\Services\CheckoutService;
 use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,9 +21,12 @@ class MidtransController extends Controller
 {
     protected MidtransService $midtransService;
 
-    public function __construct(MidtransService $midtransService)
+    protected CheckoutService $checkoutService;
+
+    public function __construct(MidtransService $midtransService, CheckoutService $checkoutService)
     {
         $this->midtransService = $midtransService;
+        $this->checkoutService = $checkoutService;
     }
 
     /**
@@ -89,87 +93,62 @@ class MidtransController extends Controller
                 return response()->json(['message' => 'Already processed'], 200);
             }
 
-            DB::beginTransaction();
+            if ($newStatus === 'Success' && $transaksi->status_pembayaran !== 'Success') {
+                DB::beginTransaction();
 
-            try {
-                if ($newStatus === 'Success' && $transaksi->status_pembayaran !== 'Success') {
-                    // Kirim email tiket ke semua volunteer
-                    $failedEmails = [];
-                    foreach ($transaksi->volunteers as $volunteer) {
-                        try {
-                            Mail::to($volunteer->email)->send(
-                                new SendTicket(
-                                    $transaksi->invoice,
-                                    $this->ticketUrl($transaksi)
-                                )
-                            );
-                        } catch (\Exception $e) {
-                            $failedEmails[] = $volunteer->email;
-                            Log::error('Midtrans: gagal kirim email tiket', [
-                                'invoice' => $invoice,
-                                'volunteer_email' => $volunteer->email,
-                                'error' => $e->getMessage(),
-                            ]);
-                        }
-                    }
-
-                    // Jika ada email yang gagal, rollback dan jangan ubah status
-                    if (! empty($failedEmails)) {
-                        DB::rollBack();
-                        Log::error('Midtrans: rollback karena email gagal', [
-                            'invoice' => $invoice,
-                            'failed_emails' => $failedEmails,
-                        ]);
-
-                        return response()->json([
-                            'message' => 'Email delivery failed',
-                            'failed_emails' => $failedEmails,
-                        ], 500);
-                    }
-
+                try {
                     $transaksi->update([
                         'status_pembayaran' => 'Success',
                         'tanggal_pembayaran' => now(),
                     ]);
 
-                    Log::info('Midtrans: transaksi berhasil, tiket terkirim', [
-                        'invoice' => $invoice,
-                    ]);
-
-                } elseif ($newStatus === 'Failed' && $transaksi->status_pembayaran === 'Pending') {
-                    // Kembalikan stok tiket jika gagal dari pending
-                    if ($transaksi->event) {
-                        $transaksi->event->increment('jumlah_tiket', $transaksi->jumlah_tiket);
-                    }
-
-                    $transaksi->update([
-                        'status_pembayaran' => 'Failed',
-                    ]);
-
-                    Log::info('Midtrans: transaksi gagal, stok tiket dikembalikan', [
-                        'invoice' => $invoice,
-                    ]);
-
-                } elseif ($newStatus === 'Pending') {
-                    // Tidak perlu update jika sudah pending
+                    DB::commit();
+                } catch (\Exception $e) {
                     DB::rollBack();
+                    Log::error('Midtrans: gagal menyimpan status Success', [
+                        'invoice' => $invoice,
+                        'error' => $e->getMessage(),
+                    ]);
 
-                    return response()->json(['message' => 'Still pending'], 200);
+                    return response()->json(['message' => 'Internal server error'], 500);
                 }
 
-                DB::commit();
+                // Kirim email tiket TERPISAH dari status pembayaran. Pembayaran sudah sukses
+                // dan tidak boleh dibatalkan hanya karena email gagal terkirim.
+                $this->dispatchTickets($transaksi);
+
+                Log::info('Midtrans: transaksi berhasil', ['invoice' => $invoice]);
 
                 return response()->json(['message' => 'Notification processed', 'status' => $newStatus], 200);
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-                Log::error('Midtrans: error saat proses notifikasi', [
-                    'invoice' => $invoice,
-                    'error' => $e->getMessage(),
-                ]);
-
-                return response()->json(['message' => 'Internal server error'], 500);
             }
+
+            if ($newStatus === 'Failed' && $transaksi->status_pembayaran === 'Pending') {
+                DB::beginTransaction();
+
+                try {
+                    // Kembalikan stok tiket dan kuota voucher yang direservasi saat checkout.
+                    $this->checkoutService->releaseReservation($transaksi);
+
+                    $transaksi->update(['status_pembayaran' => 'Failed']);
+
+                    DB::commit();
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    Log::error('Midtrans: gagal memproses transaksi gagal', [
+                        'invoice' => $invoice,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    return response()->json(['message' => 'Internal server error'], 500);
+                }
+
+                Log::info('Midtrans: transaksi gagal, reservasi dikembalikan', ['invoice' => $invoice]);
+
+                return response()->json(['message' => 'Notification processed', 'status' => $newStatus], 200);
+            }
+
+            // Pending atau tidak ada perubahan status yang perlu diproses.
+            return response()->json(['message' => 'No state change', 'status' => $newStatus], 200);
 
         } catch (\Exception $e) {
             Log::error('Midtrans: gagal parse notifikasi', [
@@ -177,6 +156,30 @@ class MidtransController extends Controller
             ]);
 
             return response()->json(['message' => 'Failed to parse notification'], 400);
+        }
+    }
+
+    /**
+     * Antrikan email tiket ke seluruh volunteer. Kegagalan tiap email dicatat, tidak dilempar,
+     * agar tidak memengaruhi status pembayaran yang sudah final.
+     */
+    private function dispatchTickets(Transaksi $transaksi): void
+    {
+        foreach ($transaksi->volunteers as $volunteer) {
+            try {
+                Mail::to($volunteer->email)->queue(
+                    new SendTicket(
+                        $transaksi->invoice,
+                        $this->ticketUrl($transaksi)
+                    )
+                );
+            } catch (\Throwable $e) {
+                Log::error('Midtrans: gagal mengantrikan email tiket', [
+                    'invoice' => $transaksi->invoice,
+                    'volunteer_email' => $volunteer->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 

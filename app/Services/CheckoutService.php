@@ -134,6 +134,52 @@ class CheckoutService
         }
     }
 
+    /**
+     * Kembalikan sumber daya yang direservasi saat checkout ketika transaksi batal/gagal/expired:
+     * stok tiket dan kuota voucher internal. Voucher eksternal tidak punya endpoint pembatalan,
+     * jadi hanya dicatat untuk rekonsiliasi manual.
+     *
+     * Pemanggil bertanggung jawab memastikan transaksi memang masih 'Pending' (belum pernah dirilis)
+     * dan menjalankan ini di dalam DB transaction agar konsisten dengan perubahan status.
+     */
+    public function releaseReservation(Transaksi $transaksi): void
+    {
+        // 1. Kembalikan stok tiket
+        if ($transaksi->id_event) {
+            Event::where('id', $transaksi->id_event)
+                ->increment('jumlah_tiket', $transaksi->jumlah_tiket);
+        }
+
+        // 2. Kembalikan kuota voucher internal
+        if ($transaksi->id_voucher) {
+            $voucher = KodeVoucher::where('id', $transaksi->id_voucher)
+                ->lockForUpdate()
+                ->first();
+
+            if ($voucher) {
+                // Jangan sampai negatif walau ada anomali data.
+                $restore = min($transaksi->jumlah_tiket, $voucher->digunakan);
+                if ($restore > 0) {
+                    $voucher->decrement('digunakan', $restore);
+                }
+
+                if ($voucher->is_external) {
+                    Log::warning('Voucher eksternal terpakai pada transaksi gagal; perlu rekonsiliasi manual (tidak ada endpoint pembatalan).', [
+                        'invoice' => $transaksi->invoice,
+                        'kode'    => $voucher->kode,
+                    ]);
+                }
+            }
+        }
+
+        Log::info('Reservasi transaksi dikembalikan', [
+            'invoice'      => $transaksi->invoice,
+            'event_id'     => $transaksi->id_event,
+            'ticket_count' => $transaksi->jumlah_tiket,
+            'voucher_id'   => $transaksi->id_voucher,
+        ]);
+    }
+
     private function formatPhone(string $phone): string
     {
         $phone = preg_replace('/[^0-9]/', '', $phone);

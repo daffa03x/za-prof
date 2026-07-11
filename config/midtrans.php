@@ -19,6 +19,14 @@ return [
     'is_3ds'        => env('MIDTRANS_IS_3DS', true),
 
     /*
+    | Batas waktu pembayaran (menit) — dipakai custom_expiry Midtrans, timer frontend, & release stok.
+    | Grace: jeda setelah expiry sebelum stok dilepas. TTL: fallback bila expiry_time tak tersedia.
+    */
+    'payment_expiry_minutes' => (int) env('MIDTRANS_PAYMENT_EXPIRY_MINUTES', 15),
+    'expiry_grace_minutes'   => (int) env('MIDTRANS_EXPIRY_GRACE_MINUTES', 15),
+    'pending_ttl_hours'      => (int) env('MIDTRANS_PENDING_TTL_HOURS', 25),
+
+    /*
     | URL Snap Midtrans (otomatis dipilih berdasarkan is_production)
     */
     'snap_url' => env('MIDTRANS_IS_PRODUCTION', false)

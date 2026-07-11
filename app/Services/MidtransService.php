@@ -88,6 +88,12 @@ class MidtransService
                 'email' => $transaksi->email,
                 'phone' => $transaksi->telepon,
             ],
+            // Batas waktu pembayaran seragam untuk semua channel (default 15 menit).
+            // Midtrans akan mengembalikan expiry_time yang dipakai timer frontend & release stok.
+            'custom_expiry' => [
+                'expiry_duration' => (int) config('midtrans.payment_expiry_minutes', 15),
+                'unit' => 'minute',
+            ],
         ];
 
         switch ($payment->midtrans_payment_type) {
