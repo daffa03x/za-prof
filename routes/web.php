@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\FailedEmailController;
 use App\Http\Controllers\TransaksiController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PixelController;
@@ -93,6 +94,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/voucher/trashed', [VoucherController::class, 'trashed'])->name('voucher.trashed');
     Route::post('/voucher/{id}/restore', [VoucherController::class, 'restore'])->name('voucher.restore');
     Route::delete('/voucher/{id}/force-delete', [VoucherController::class, 'forceDelete'])->name('voucher.forceDelete');
+
+    // Email Tidak Terkirim (failed jobs) — tracking & kirim ulang
+    Route::get('/failed-email', [FailedEmailController::class, 'index'])->name('failed-email.index');
+    Route::post('/failed-email/retry-all', [FailedEmailController::class, 'retryAll'])->name('failed-email.retryAll');
+    Route::post('/failed-email/{uuid}/retry', [FailedEmailController::class, 'retry'])->name('failed-email.retry');
+    Route::delete('/failed-email/{uuid}', [FailedEmailController::class, 'destroy'])->name('failed-email.destroy');
 
     // Resource Routes
     Route::resource('/event', EventController::class);

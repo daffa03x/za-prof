@@ -432,6 +432,7 @@
             ['url' => '/transaksi', 'label' => 'Transaksi', 'icon' => 'bi-receipt', 'active' => Request::is('transaksi*')],
             ['url' => '/payment', 'label' => 'Metode Pembayaran', 'icon' => 'bi-credit-card', 'active' => Request::is('payment*')],
             ['url' => '/voucher', 'label' => 'Kode Voucher', 'icon' => 'bi-ticket-perforated', 'active' => Request::is('voucher*')],
+            ['url' => '/failed-email', 'label' => 'Email Tidak Terkirim', 'icon' => 'bi-envelope-exclamation', 'active' => Request::is('failed-email*')],
         ];
     @endphp
 
