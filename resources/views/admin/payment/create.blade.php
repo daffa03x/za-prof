@@ -9,18 +9,19 @@
                 <x-form-alerts />
 
                 {{-- Header --}}
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="mb-0">
-                        <i class="fas fa-credit-card me-2"></i>Tambah Payment
-                    </h4>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                        <h2 class="page-title">Tambah Metode Pembayaran</h2>
+                        <p class="page-subtitle mb-0">Tambahkan bank, e-wallet, atau channel Midtrans.</p>
+                    </div>
                     <a href="{{ route('payment.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i>Kembali
+                        <i class="bi bi-arrow-left me-1"></i>Kembali
                     </a>
                 </div>
 
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <i class="fas fa-edit me-2"></i>Form Payment
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-credit-card me-2"></i>Form Metode Pembayaran
                     </div>
                     <div class="card-body p-4">
                         <form method="POST" action="{{ route('payment.store') }}" enctype="multipart/form-data">
@@ -88,7 +89,7 @@
                             {{-- Submit --}}
                             <div class="d-flex gap-2 pt-3 border-top">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-1"></i>Simpan Payment
+                                    <i class="bi bi-check-lg me-1"></i>Simpan
                                 </button>
                                 <a href="{{ route('payment.index') }}" class="btn btn-outline-secondary">
                                     Batal

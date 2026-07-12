@@ -14,7 +14,7 @@
     <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
         <label class="form-label fw-semibold mb-0">Yang Kamu Dapat</label>
         <button type="button" class="btn btn-sm btn-outline-primary" data-benefit-add>
-            <i class="fas fa-plus me-1"></i>Tambah Benefit
+            <i class="bi bi-plus-lg me-1"></i>Tambah Benefit
         </button>
     </div>
 
