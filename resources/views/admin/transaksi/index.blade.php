@@ -111,6 +111,11 @@
                                                 class="btn btn-sm btn-outline-primary" title="Lihat">
                                                 <i class="bi bi-eye"></i>
                                             </a>
+                                            <button type="button" class="btn btn-sm btn-outline-success"
+                                                title="Kirim Email Tiket"
+                                                onclick="sendTicketEmail('{{ $item->invoice }}', this)">
+                                                <i class="bi bi-envelope"></i>
+                                            </button>
                                             <form action="{{ route('transaksi.destroy', $item->invoice) }}" method="POST"
                                                 class="m-0" onsubmit="return confirmDelete();">
                                                 @csrf
@@ -147,6 +152,33 @@
     </style>
 
     <script>
+        async function sendTicketEmail(invoice, btn) {
+            if (!confirm('Kirim ulang email tiket untuk transaksi ini?')) return;
+
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            try {
+                const response = await fetch(`/transaksi/${encodeURIComponent(invoice)}/kirim-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                const result = await response.json();
+                alert(result.message || (response.ok ? 'Email terkirim.' : 'Gagal mengirim email.'));
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan. Silakan coba lagi.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        }
+
         async function updateStatus(id, selectElement) {
             const confirmation = confirm("Apakah Anda yakin ingin memperbarui status transaksi ini?");
             const previousValue = selectElement.getAttribute('data-prev') || selectElement.value;
