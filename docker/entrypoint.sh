@@ -102,13 +102,27 @@ chown -R www-data:www-data public/image 2>/dev/null || true
 chmod -R 775 public/image 2>/dev/null || true
 echo "[entrypoint] public/image ready for uploads"
 
-# ---------- Seed gambar lama ke volume (DINONAKTIFKAN) ----------
-# Seeding sudah tidak diperlukan: gambar sudah tersinkron di Railway Volume (public/image).
-# Menjalankan seed lagi berisiko menimpa file, jadi blok ini sengaja dimatikan.
-# Prasyarat agar upload TIDAK hilang saat redeploy: Railway Volume HARUS ter-mount di
-# /var/www/html/public/image. Tanpa volume, upload baru tersimpan di filesystem ephemeral
-# dan akan hilang tiap deploy (bukan karena seed).
-echo "[entrypoint] Seed dinonaktifkan (gambar sudah sinkron di volume)"
+# ---------- Seed gambar lama ke volume (sekali saja) ----------
+# Mengisi Railway Volume (public/image) dengan gambar lama dari arsip. Hanya jalan SEKALI:
+# setelah sukses, dibuat marker public/image/.seeded sehingga deploy berikutnya tidak seed lagi.
+# tar hanya MENAMBAH/menimpa file dari arsip; tidak menghapus upload baru dari admin.
+# Prasyarat: Railway Volume HARUS ter-mount di /var/www/html/public/image agar hasil seed
+# dan upload berikutnya persisten (tidak hilang saat redeploy).
+if [ -f docker/seed/images.tar.gz ] && [ ! -f public/image/.seeded ]; then
+    echo "[entrypoint] Seeding gambar lama ke volume..."
+    if tar -xzf docker/seed/images.tar.gz -C public/image; then
+        # Kompat: bila arsip ternyata berisi folder image/ di dalamnya, ratakan strukturnya.
+        if [ -d public/image/image ]; then
+            cp -rn public/image/image/. public/image/ 2>/dev/null || true
+            rm -rf public/image/image
+        fi
+        touch public/image/.seeded
+        chown -R www-data:www-data public/image 2>/dev/null || true
+        echo "[entrypoint] Seed gambar lama selesai"
+    else
+        echo "[entrypoint] WARN: gagal extract seed images"
+    fi
+fi
 
 # ---------- Start PHP-FPM ----------
 echo "[entrypoint] Starting PHP-FPM in background..."
