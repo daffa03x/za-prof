@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
@@ -77,14 +76,18 @@ class PortalController extends Controller
     public function checkout(string $slug): View
     {
         $data = Event::where('slug', $slug)->firstOrFail();
-        
-        // Cache payment methods for 30 minutes (rarely changes)
-        $payment = Cache::remember('active_payment_methods', 1800, function () {
-            return Payment::select(['id', 'name', 'image', 'no_rek', 'type', 'midtrans_payment_type', 'midtrans_bank'])
+
+        // Portal memakai Midtrans Snap: satu metode Snap (midtrans_payment_type = NULL).
+        // Channel (VA/Transfer Bank, GoPay, QRIS, kartu kredit, dll) dipilih di dalam popup Snap,
+        // jadi checkout cukup menampilkan satu opsi "Bayar via Midtrans".
+        $payment = Cache::remember('portal_snap_payment_method', 1800, function () {
+            return Payment::select(['id', 'name', 'image', 'type', 'midtrans_payment_type'])
                 ->where('status', true)
+                ->where('type', 'midtrans')
+                ->whereNull('midtrans_payment_type')
                 ->orderBy('id')
-                ->get();
-        })->where('type', 'midtrans')->values();
+                ->first();
+        });
 
         return view('portal.checkout', compact('data', 'payment'));
     }
@@ -96,9 +99,6 @@ class PortalController extends Controller
     {
         $request->validate([
             'jumlah_tiket'         => 'required|integer|min:1|max:3',
-            'payment'              => ['required', Rule::exists('payments', 'id')->where(fn ($q) =>
-                $q->where('status', true)->where('type', 'midtrans')
-            )],
             'pengunjung'           => 'required|array|min:1',
             'pengunjung.*.name'    => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'pengunjung.*.telepon' => ['required', 'string', 'min:9', 'max:13', 'regex:/^[0-9]+$/'],
@@ -114,8 +114,6 @@ class PortalController extends Controller
             'pengunjung.*.telepon.regex'    => 'Nomor ponsel hanya boleh berisi angka',
             'pengunjung.*.email.required'   => 'Email wajib diisi',
             'pengunjung.*.email.email'      => 'Format email tidak valid',
-            'payment.required'              => 'Metode pembayaran wajib dipilih.',
-            'payment.exists'                => 'Metode pembayaran tidak tersedia. Silakan pilih pembayaran Midtrans.',
         ]);
 
         if (count($request->input('pengunjung', [])) !== (int) $request->jumlah_tiket) {
@@ -125,10 +123,19 @@ class PortalController extends Controller
         }
 
         try {
-            $event   = Event::where('slug', $slug)->firstOrFail();
+            $event = Event::where('slug', $slug)->firstOrFail();
+
+            // Portal selalu memakai Midtrans Snap: ambil metode Snap (midtrans_payment_type = NULL).
+            // Channel spesifik dipilih pengguna di dalam popup Snap pada halaman invoice.
             $payment = Payment::where('status', true)
                 ->where('type', 'midtrans')
-                ->findOrFail($request->payment);
+                ->whereNull('midtrans_payment_type')
+                ->orderBy('id')
+                ->first();
+
+            if (! $payment) {
+                return redirect()->back()->with('error', 'Metode pembayaran Midtrans belum tersedia. Silakan hubungi admin.');
+            }
 
             $transaksi = app(CheckoutService::class)->process(
                 $event,

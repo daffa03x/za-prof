@@ -93,6 +93,7 @@ class PaymentController extends Controller
 
             // Clear payment cache
             Cache::forget('active_payment_methods');
+            Cache::forget('portal_snap_payment_method');
 
             Log::info('Payment method created', [
                 'payment_name' => $data['name'],
@@ -156,6 +157,7 @@ class PaymentController extends Controller
 
             // Clear payment cache
             Cache::forget('active_payment_methods');
+            Cache::forget('portal_snap_payment_method');
 
             Log::info('Payment method updated', [
                 'payment_id' => $payment->id,
@@ -186,6 +188,7 @@ class PaymentController extends Controller
 
             $payment->delete();
             Cache::forget('active_payment_methods');
+            Cache::forget('portal_snap_payment_method');
 
             Log::info('Payment method soft deleted', [
                 'payment_id' => $paymentId,

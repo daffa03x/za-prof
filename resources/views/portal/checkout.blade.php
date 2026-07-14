@@ -259,46 +259,29 @@
                                     </div>
                                 </div>
                                 <div class="container mt-5">
-                                    @php
-                                        $midtransPayments = $payment->where('type', 'midtrans')->values();
-                                    @endphp
                                     <h3 class="mb-4">Metode Pembayaran</h3>
                                     <div class="list-group">
-                                        @forelse ($midtransPayments as $index => $item)
-                                            <label
-                                                class="list-group-item d-flex justify-content-between align-items-center">
-                                                <input type="radio" name="payment" value="{{ $item->id }}"
-                                                    class="form-check-input mx-3"
-                                                    {{ (string) old('payment', $midtransPayments->first()->id) === (string) $item->id ? 'checked' : '' }}>
-                                                <div class="d-flex justify-content-end align-items-center flex-grow-1">
-                                                    <img src="{{ asset($item->image) }}" alt="{{ $item->name }}"
-                                                        class="me-2" style="width: 110px; height: 40px;">
-                                                    <span class="fw-semibold">{{ $item->name }}</span>
+                                        @if ($payment)
+                                            <div class="list-group-item d-flex align-items-center">
+                                                <i class="bi bi-credit-card-2-front fs-3 me-3"
+                                                    style="color: #5a2d67"></i>
+                                                <div>
+                                                    <span class="fw-semibold d-block">Bayar via Midtrans</span>
+                                                    <small class="text-muted">
+                                                        Pilih metode pembayaran (Transfer Bank/VA, GoPay, QRIS, kartu
+                                                        kredit, dan lainnya) di halaman pembayaran berikutnya.
+                                                    </small>
                                                 </div>
-                                            </label>
-                                        @empty
+                                            </div>
+                                        @else
                                             <div class="alert alert-warning mb-0">
                                                 Metode pembayaran Midtrans belum tersedia. Silakan hubungi admin.
                                             </div>
-                                        @endforelse
+                                        @endif
                                     </div>
                                 </div>
                                 <script>
                                     function validatePayment() {
-                                        const selected = document.querySelector('input[name="payment"]:checked');
-                                        if (!selected) {
-                                            Swal.fire({
-                                                icon: 'warning',
-                                                title: 'Metode Pembayaran Belum Dipilih!',
-                                                text: 'Silakan pilih metode pembayaran Midtrans.',
-                                                toast: true,
-                                                position: 'top-end',
-                                                timer: 3000,
-                                                showConfirmButton: false
-
-                                            });
-                                            return false;
-                                        }
                                         return true;
                                     }
                                 </script>
