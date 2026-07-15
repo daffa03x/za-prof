@@ -147,6 +147,21 @@ else
     echo "[entrypoint] QUEUE_CONNECTION=sync, queue worker not started"
 fi
 
+# ---------- Scheduler (cron Laravel) ----------
+# Tanpa proses ini, jadwal di App\Console\Kernel (mis. transaksi:expire-pending tiap 15 menit)
+# TIDAK PERNAH jalan. schedule:work adalah proses long-running yang memicu schedule:run tiap
+# menit — pengganti entry cron sistem "* * * * * php artisan schedule:run". Dijalankan di
+# background dengan loop restart supaya bila mati otomatis hidup lagi.
+echo "[entrypoint] Starting scheduler (schedule:work) in background..."
+(
+    while true; do
+        php artisan schedule:work 2>&1
+        echo "[entrypoint] scheduler exited, restarting in 3s..."
+        sleep 3
+    done
+) &
+echo "[entrypoint] scheduler launched"
+
 # ---------- Start nginx in foreground (becomes PID 1) ----------
 echo "[entrypoint] Starting nginx on port ${PORT}..."
 exec /usr/sbin/nginx -g "daemon off;"
