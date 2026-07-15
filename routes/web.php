@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FailedEmailController;
+use App\Http\Controllers\SentEmailController;
 use App\Http\Controllers\TransaksiController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PixelController;
@@ -101,6 +102,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/failed-email/retry-all', [FailedEmailController::class, 'retryAll'])->name('failed-email.retryAll');
     Route::post('/failed-email/{uuid}/retry', [FailedEmailController::class, 'retry'])->name('failed-email.retry');
     Route::delete('/failed-email/{uuid}', [FailedEmailController::class, 'destroy'])->name('failed-email.destroy');
+
+    Route::get('/sent-email', [SentEmailController::class, 'index'])->name('sent-email.index');
+    Route::delete('/sent-email/clear-all', [SentEmailController::class, 'clearAll'])->name('sent-email.clearAll');
+    Route::delete('/sent-email/{id}', [SentEmailController::class, 'destroy'])->name('sent-email.destroy');
 
     // Resource Routes
     Route::resource('/event', EventController::class);

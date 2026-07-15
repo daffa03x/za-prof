@@ -433,6 +433,7 @@
             ['url' => '/payment', 'label' => 'Metode Pembayaran', 'icon' => 'bi-credit-card', 'active' => Request::is('payment*')],
             ['url' => '/voucher', 'label' => 'Kode Voucher', 'icon' => 'bi-ticket-perforated', 'active' => Request::is('voucher*')],
             ['url' => '/failed-email', 'label' => 'Email Tidak Terkirim', 'icon' => 'bi-envelope-exclamation', 'active' => Request::is('failed-email*')],
+            ['url' => '/sent-email', 'label' => 'Email Tiket Terkirim', 'icon' => 'bi-envelope-check', 'active' => Request::is('sent-email*')],
         ];
     @endphp
 

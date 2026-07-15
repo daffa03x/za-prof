@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 
 class SendTicket extends Mailable implements ShouldQueue
@@ -57,6 +58,19 @@ class SendTicket extends Mailable implements ShouldQueue
     {
         return new Envelope(
             subject: 'Tiket Event',
+        );
+    }
+
+    /**
+     * Header khusus penanda email tiket. Dipakai listener RecordSentTicketEmail untuk
+     * mengenali email tiket yang berhasil terkirim dan mencatat invoice-nya.
+     */
+    public function headers(): Headers
+    {
+        return new Headers(
+            text: [
+                'X-Ticket-Invoice' => (string) $this->transactionId,
+            ],
         );
     }
 
