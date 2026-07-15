@@ -586,10 +586,12 @@ class TransaksiController extends Controller
 
             foreach ($recipients as $email) {
                 try {
-                    // sendNow: paksa kirim SINKRON meski SendTicket implements ShouldQueue.
-                    // Tanpa ini, ->send() hanya memasukkan ke antrean, sehingga admin tidak
-                    // benar-benar tahu berhasil/gagal saat itu juga.
-                    Mail::to($email)->sendNow(new SendTicket($transaksi->invoice, $ticketUrl));
+                    // Kirim SINKRON meski SendTicket implements ShouldQueue: panggil send()
+                    // langsung pada Mailable (bukan Mail::to()->send(), yang akan mengantre),
+                    // supaya admin langsung tahu berhasil/gagal saat itu juga.
+                    (new SendTicket($transaksi->invoice, $ticketUrl))
+                        ->to($email)
+                        ->send(app('mailer'));
                     $sent[] = $email;
 
                     Log::info('Ticket email manually resent', [
