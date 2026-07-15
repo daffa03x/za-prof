@@ -73,8 +73,8 @@ class ResendTransport extends AbstractTransport
     private function payload(Email $email): array
     {
         $payload = [
-            'from' => $this->stringifyAddresses($email->getFrom())[0] ?? '',
-            'to' => $this->stringifyAddresses($email->getTo()),
+            'from' => $this->formatAddresses($email->getFrom())[0] ?? '',
+            'to' => $this->formatAddresses($email->getTo()),
             'subject' => $email->getSubject() ?? '',
         ];
 
@@ -86,15 +86,15 @@ class ResendTransport extends AbstractTransport
             $payload['text'] = is_string($text) ? $text : (string) $text;
         }
 
-        if ($cc = $this->stringifyAddresses($email->getCc())) {
+        if ($cc = $this->formatAddresses($email->getCc())) {
             $payload['cc'] = $cc;
         }
 
-        if ($bcc = $this->stringifyAddresses($email->getBcc())) {
+        if ($bcc = $this->formatAddresses($email->getBcc())) {
             $payload['bcc'] = $bcc;
         }
 
-        if ($replyTo = $this->stringifyAddresses($email->getReplyTo())) {
+        if ($replyTo = $this->formatAddresses($email->getReplyTo())) {
             $payload['reply_to'] = $replyTo;
         }
 
@@ -122,7 +122,7 @@ class ResendTransport extends AbstractTransport
      * @param  array<int, Address>  $addresses
      * @return array<int, string>
      */
-    private function stringifyAddresses(array $addresses): array
+    private function formatAddresses(array $addresses): array
     {
         return array_map(static function (Address $address): string {
             return $address->getName() !== ''
