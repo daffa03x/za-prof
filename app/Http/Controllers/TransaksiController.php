@@ -566,58 +566,80 @@ class TransaksiController extends Controller
      */
     public function sendTicketEmail(Transaksi $transaksi): JsonResponse
     {
-        $transaksi->loadMissing('volunteers');
+        try {
+            $transaksi->loadMissing('volunteers');
 
-        // Penerima: volunteer bila ada, jika kosong pakai email pembeli sebagai cadangan.
-        $recipients = $transaksi->volunteers->pluck('email')->filter()->unique()->values();
+            // Penerima: volunteer bila ada, jika kosong pakai email pembeli sebagai cadangan.
+            $recipients = $transaksi->volunteers->pluck('email')->filter()->unique()->values();
 
-        if ($recipients->isEmpty() && ! empty($transaksi->email)) {
-            $recipients = collect([$transaksi->email]);
-        }
-
-        if ($recipients->isEmpty()) {
-            return response()->json(['message' => 'Tidak ada penerima email untuk transaksi ini.'], 400);
-        }
-
-        $ticketUrl = $this->ticketUrl($transaksi);
-        $sent = [];
-        $failed = [];
-
-        foreach ($recipients as $email) {
-            try {
-                Mail::to($email)->send(new SendTicket($transaksi->invoice, $ticketUrl));
-                $sent[] = $email;
-
-                Log::info('Ticket email manually resent', [
-                    'invoice' => $transaksi->invoice,
-                    'recipient' => $email,
-                    'user_id' => auth()->id(),
-                ]);
-            } catch (\Throwable $e) {
-                $failed[] = $email;
-
-                Log::error('Failed to manually resend ticket email', [
-                    'invoice' => $transaksi->invoice,
-                    'recipient' => $email,
-                    'error' => $e->getMessage(),
-                    'user_id' => auth()->id(),
-                ]);
+            if ($recipients->isEmpty() && ! empty($transaksi->email)) {
+                $recipients = collect([$transaksi->email]);
             }
-        }
 
-        if (! empty($failed)) {
+            if ($recipients->isEmpty()) {
+                return response()->json(['message' => 'Tidak ada penerima email untuk transaksi ini.'], 400);
+            }
+
+            $ticketUrl = $this->ticketUrl($transaksi);
+            $sent = [];
+            $failed = [];
+
+            foreach ($recipients as $email) {
+                try {
+                    // sendNow: paksa kirim SINKRON meski SendTicket implements ShouldQueue.
+                    // Tanpa ini, ->send() hanya memasukkan ke antrean, sehingga admin tidak
+                    // benar-benar tahu berhasil/gagal saat itu juga.
+                    Mail::to($email)->sendNow(new SendTicket($transaksi->invoice, $ticketUrl));
+                    $sent[] = $email;
+
+                    Log::info('Ticket email manually resent', [
+                        'invoice' => $transaksi->invoice,
+                        'recipient' => $email,
+                        'user_id' => auth()->id(),
+                    ]);
+                } catch (\Throwable $e) {
+                    // Simpan pesan error nyata per penerima agar admin melihat penyebabnya.
+                    $failed[$email] = $e->getMessage();
+
+                    Log::error('Failed to manually resend ticket email', [
+                        'invoice' => $transaksi->invoice,
+                        'recipient' => $email,
+                        'error' => $e->getMessage(),
+                        'user_id' => auth()->id(),
+                    ]);
+                }
+            }
+
+            if (! empty($failed)) {
+                $detail = [];
+                foreach ($failed as $email => $err) {
+                    $detail[] = $email.' ('.$err.')';
+                }
+
+                return response()->json([
+                    'message' => 'Gagal mengirim ke: '.implode('; ', $detail).'.'
+                        .(empty($sent) ? '' : ' Berhasil ke: '.implode(', ', $sent).'.'),
+                    'sent' => $sent,
+                    'failed' => array_keys($failed),
+                ], 500);
+            }
+
             return response()->json([
-                'message' => 'Gagal mengirim ke: '.implode(', ', $failed).'.'
-                    .(empty($sent) ? '' : ' Berhasil ke: '.implode(', ', $sent).'.'),
+                'message' => 'Email tiket berhasil dikirim ke '.count($sent).' penerima ('.implode(', ', $sent).').',
                 'sent' => $sent,
-                'failed' => $failed,
+            ]);
+        } catch (\Throwable $e) {
+            // Tangkap error di luar loop (mis. saat memuat data) agar respons tetap JSON
+            // dengan pesan asli, bukan halaman HTML 500 generik.
+            Log::error('sendTicketEmail gagal', [
+                'invoice' => $transaksi->invoice ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Gagal mengirim email: '.$e->getMessage(),
             ], 500);
         }
-
-        return response()->json([
-            'message' => 'Email tiket berhasil dikirim ke '.count($sent).' penerima ('.implode(', ', $sent).').',
-            'sent' => $sent,
-        ]);
     }
 
     private function ticketUrl(Transaksi $transaksi): string
