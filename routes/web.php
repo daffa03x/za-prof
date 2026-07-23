@@ -12,6 +12,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PixelController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\VolunteerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -89,6 +90,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/pixel/{id}/restore', [PixelController::class, 'restore'])->name('pixel.restore');
     Route::delete('/pixel/{id}/force-delete', [PixelController::class, 'forceDelete'])->name('pixel.forceDelete');
 
+    // Volunteer - Search & Export
+    Route::get('/volunteer/search', [VolunteerController::class, 'search'])->name('volunteer.search');
+    Route::post('/volunteer/export', [VolunteerController::class, 'export'])->name('volunteer.export');
+
+    // Volunteer - Soft Delete Management
+    Route::get('/volunteer/trashed', [VolunteerController::class, 'trashed'])->name('volunteer.trashed');
+    Route::post('/volunteer/{id}/restore', [VolunteerController::class, 'restore'])->name('volunteer.restore');
+    Route::delete('/volunteer/{id}/force-delete', [VolunteerController::class, 'forceDelete'])->name('volunteer.forceDelete');
+
     // Voucher - Search
     Route::get('/voucher/search', [VoucherController::class, 'search'])->name('voucher.search');
 
@@ -113,4 +123,5 @@ Route::middleware('auth')->group(function () {
     Route::resource('/payment', PaymentController::class);
     Route::resource('/pixel', PixelController::class);
     Route::resource('/voucher', VoucherController::class);
+    Route::resource('/volunteer', VolunteerController::class)->only(['index', 'destroy']);
 });
