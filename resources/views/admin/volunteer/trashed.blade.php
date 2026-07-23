@@ -29,6 +29,7 @@
                                 <th>Nama</th>
                                 <th>Email</th>
                                 <th>Telepon</th>
+                                <th>Jenis Kelamin</th>
                                 <th>Dihapus Pada</th>
                                 <th class="text-end">Aksi</th>
                             </tr>
@@ -40,6 +41,15 @@
                                     <td class="fw-semibold">{{ $item->name }}</td>
                                     <td>{{ $item->email }}</td>
                                     <td>{{ $item->telepon }}</td>
+                                    <td>
+                                        @if($item->jenis_kelamin)
+                                            <span class="badge {{ $item->jenis_kelamin === 'Laki-laki' ? 'bg-primary' : 'bg-danger' }}">
+                                                {{ $item->jenis_kelamin }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $item->deleted_at->format('d-m-Y H:i') }}</td>
                                     <td class="text-end">
                                         <div class="d-inline-flex gap-1">

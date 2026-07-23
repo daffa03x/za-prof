@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ExportVolunteer;
+use App\Models\Event;
 use App\Models\Volunteer;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -24,12 +24,13 @@ class VolunteerController extends Controller
     public function index(): View
     {
         $title = 'Volunteer';
+        $events = Event::orderBy('name')->get(['id', 'name']);
 
         $data = Volunteer::withCount('transaksis')
             ->orderByDesc('created_at')
             ->paginate(10);
 
-        return view('admin.volunteer.index', compact('title', 'data'));
+        return view('admin.volunteer.index', compact('title', 'data', 'events'));
     }
 
     /**
@@ -47,11 +48,12 @@ class VolunteerController extends Controller
     }
 
     /**
-     * Search volunteers by name, email, or phone.
+     * Search / filter volunteers by name, email, phone, or event.
      */
     public function search(Request $request): View
     {
         $title = 'Cari Volunteer';
+        $events = Event::orderBy('name')->get(['id', 'name']);
 
         $data = Volunteer::withCount('transaksis')
             ->orderByDesc('created_at')
@@ -62,23 +64,33 @@ class VolunteerController extends Controller
                           ->orWhere('telepon', 'like', '%' . $request->search . '%')
                 )
             )
-            ->paginate(10);
+            ->when($request->event_id, fn($q) =>
+                $q->whereHas('transaksis', fn($query) =>
+                    $query->where('id_event', $request->event_id)
+                )
+            )
+            ->paginate(10)
+            ->appends($request->only(['search', 'event_id']));
 
-        return view('admin.volunteer.index', compact('title', 'data'));
+        return view('admin.volunteer.index', compact('title', 'data', 'events'));
     }
 
     /**
-     * Export volunteers to Excel.
+     * Export volunteers to Excel, optionally filtered by event.
      */
     public function export(Request $request)
     {
+        $eventName = null;
+        if ($request->event_id) {
+            $event = Event::find($request->event_id);
+            $eventName = $event?->name;
+        }
+
         $data = Volunteer::withCount('transaksis')
             ->orderByDesc('created_at')
-            ->when($request->search, fn($q) =>
-                $q->where(fn($query) =>
-                    $query->where('name', 'like', '%' . $request->search . '%')
-                          ->orWhere('email', 'like', '%' . $request->search . '%')
-                          ->orWhere('telepon', 'like', '%' . $request->search . '%')
+            ->when($request->event_id, fn($q) =>
+                $q->whereHas('transaksis', fn($query) =>
+                    $query->where('id_event', $request->event_id)
                 )
             )
             ->get();
@@ -88,16 +100,22 @@ class VolunteerController extends Controller
             'name'            => $item->name,
             'email'           => $item->email,
             'telepon'         => $item->telepon,
+            'jenis_kelamin'   => $item->jenis_kelamin ?? '-',
             'jumlah_transaksi'=> $item->transaksis_count,
             'created_at'      => $item->created_at?->format('d-m-Y H:i'),
         ]);
 
+        $filename = $eventName
+            ? 'Volunteer-' . str($eventName)->slug() . '.xlsx'
+            : 'Volunteer.xlsx';
+
         Log::info('Volunteer export requested', [
             'total_records' => $formatted->count(),
+            'event_id'      => $request->event_id,
             'user_id'       => auth()->id(),
         ]);
 
-        return Excel::download(new ExportVolunteer($formatted), 'Volunteer.xlsx');
+        return Excel::download(new ExportVolunteer($formatted), $filename);
     }
 
     /**

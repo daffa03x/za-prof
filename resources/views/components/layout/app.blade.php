@@ -16,12 +16,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    <!-- Quill editor -->
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <!-- quill editor styles only (script loaded at bottom) -->
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 
     <link href="{{ asset('assets/img/Logo-ZA.png') }}" rel="icon">
@@ -425,16 +424,17 @@
 </head>
 
 <body>
-    @php
+        @php
         $navItems = [
-            ['url' => '/dashboard', 'label' => 'Dashboard', 'icon' => 'bi-grid-1x2', 'active' => Request::is('dashboard')],
-            ['url' => '/event', 'label' => 'Event', 'icon' => 'bi-calendar-event', 'active' => Request::is('event*')],
-            ['url' => '/transaksi', 'label' => 'Transaksi', 'icon' => 'bi-receipt', 'active' => Request::is('transaksi*')],
-            ['url' => '/payment', 'label' => 'Metode Pembayaran', 'icon' => 'bi-credit-card', 'active' => Request::is('payment*')],
-            ['url' => '/voucher', 'label' => 'Kode Voucher', 'icon' => 'bi-ticket-perforated', 'active' => Request::is('voucher*')],
-            ['url' => '/volunteer', 'label' => 'Volunteer', 'icon' => 'bi-people', 'active' => Request::is('volunteer*')],
+            ['url' => '/dashboard',    'label' => 'Dashboard',            'icon' => 'bi-grid-1x2',              'active' => Request::is('dashboard')],
+            ['url' => '/event',        'label' => 'Event',                'icon' => 'bi-calendar-event',        'active' => Request::is('event*')],
+            ['url' => '/transaksi',    'label' => 'Transaksi',            'icon' => 'bi-receipt',               'active' => Request::is('transaksi*')],
+            ['url' => '/payment',      'label' => 'Metode Pembayaran',    'icon' => 'bi-credit-card',           'active' => Request::is('payment*')],
+            ['url' => '/pixel',        'label' => 'Pixel Tracking',       'icon' => 'bi-broadcast',             'active' => Request::is('pixel*')],
+            ['url' => '/voucher',      'label' => 'Kode Voucher',         'icon' => 'bi-ticket-perforated',     'active' => Request::is('voucher*')],
+            ['url' => '/volunteer',    'label' => 'Volunteer',            'icon' => 'bi-people',                'active' => Request::is('volunteer*')],
             ['url' => '/failed-email', 'label' => 'Email Tidak Terkirim', 'icon' => 'bi-envelope-exclamation', 'active' => Request::is('failed-email*')],
-            ['url' => '/sent-email', 'label' => 'Email Tiket Terkirim', 'icon' => 'bi-envelope-check', 'active' => Request::is('sent-email*')],
+            ['url' => '/sent-email',   'label' => 'Email Tiket Terkirim', 'icon' => 'bi-envelope-check',       'active' => Request::is('sent-email*')],
         ];
     @endphp
 
@@ -485,7 +485,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmSXnxKmxHzRZ3WFe/yINqE8mVm"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
     <script>
         // Sidebar mobile toggle
@@ -530,6 +533,8 @@
             });
         })();
     </script>
+
+    @stack('scripts')
 </body>
 
 </html>

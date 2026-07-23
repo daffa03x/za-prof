@@ -93,18 +93,27 @@ class MidtransController extends Controller
                 return response()->json(['message' => 'Already processed'], 200);
             }
 
-            if ($newStatus === 'Success' && $transaksi->status_pembayaran !== 'Success') {
-                DB::beginTransaction();
-
+            if ($newStatus === 'Success') {
+                // Kunci baris & baca ulang status di dalam transaction agar webhook ganda
+                // (Midtrans dapat mengirim/retry notifikasi bersamaan) tidak memproses dua kali.
                 try {
-                    $transaksi->update([
-                        'status_pembayaran' => 'Success',
-                        'tanggal_pembayaran' => now(),
-                    ]);
+                    $processed = DB::transaction(function () use ($invoice) {
+                        $fresh = Transaksi::where('invoice', $invoice)
+                            ->lockForUpdate()
+                            ->first();
 
-                    DB::commit();
+                        if (! $fresh || $fresh->status_pembayaran === 'Success') {
+                            return null;
+                        }
+
+                        $fresh->update([
+                            'status_pembayaran' => 'Success',
+                            'tanggal_pembayaran' => now(),
+                        ]);
+
+                        return $fresh;
+                    });
                 } catch (\Exception $e) {
-                    DB::rollBack();
                     Log::error('Midtrans: gagal menyimpan status Success', [
                         'invoice' => $invoice,
                         'error' => $e->getMessage(),
@@ -113,27 +122,45 @@ class MidtransController extends Controller
                     return response()->json(['message' => 'Internal server error'], 500);
                 }
 
+                if ($processed === null) {
+                    Log::info('Midtrans: transaksi sudah Success, notifikasi diabaikan', [
+                        'invoice' => $invoice,
+                    ]);
+
+                    return response()->json(['message' => 'Already processed'], 200);
+                }
+
                 // Kirim email tiket TERPISAH dari status pembayaran. Pembayaran sudah sukses
                 // dan tidak boleh dibatalkan hanya karena email gagal terkirim.
-                $this->dispatchTickets($transaksi);
+                $processed->load(['volunteers', 'event']);
+                $this->dispatchTickets($processed);
 
                 Log::info('Midtrans: transaksi berhasil', ['invoice' => $invoice]);
 
                 return response()->json(['message' => 'Notification processed', 'status' => $newStatus], 200);
             }
 
-            if ($newStatus === 'Failed' && $transaksi->status_pembayaran === 'Pending') {
-                DB::beginTransaction();
-
+            if ($newStatus === 'Failed') {
                 try {
-                    // Kembalikan stok tiket dan kuota voucher yang direservasi saat checkout.
-                    $this->checkoutService->releaseReservation($transaksi);
+                    $released = DB::transaction(function () use ($invoice) {
+                        // Kunci baris & pastikan masih Pending untuk menghindari balapan dengan
+                        // webhook ganda maupun command expire (dobel-restore stok tiket/voucher).
+                        $fresh = Transaksi::where('invoice', $invoice)
+                            ->where('status_pembayaran', 'Pending')
+                            ->lockForUpdate()
+                            ->first();
 
-                    $transaksi->update(['status_pembayaran' => 'Failed']);
+                        if (! $fresh) {
+                            return false;
+                        }
 
-                    DB::commit();
+                        // Kembalikan stok tiket dan kuota voucher yang direservasi saat checkout.
+                        $this->checkoutService->releaseReservation($fresh);
+                        $fresh->update(['status_pembayaran' => 'Failed']);
+
+                        return true;
+                    });
                 } catch (\Exception $e) {
-                    DB::rollBack();
                     Log::error('Midtrans: gagal memproses transaksi gagal', [
                         'invoice' => $invoice,
                         'error' => $e->getMessage(),
@@ -142,7 +169,9 @@ class MidtransController extends Controller
                     return response()->json(['message' => 'Internal server error'], 500);
                 }
 
-                Log::info('Midtrans: transaksi gagal, reservasi dikembalikan', ['invoice' => $invoice]);
+                if ($released) {
+                    Log::info('Midtrans: transaksi gagal, reservasi dikembalikan', ['invoice' => $invoice]);
+                }
 
                 return response()->json(['message' => 'Notification processed', 'status' => $newStatus], 200);
             }

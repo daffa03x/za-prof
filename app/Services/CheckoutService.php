@@ -19,7 +19,7 @@ class CheckoutService
      * Proses checkout: potong stok, buat transaksi, attach volunteer, redeem voucher, buat snap token.
      * Total pembayaran dihitung server-side; jangan percaya nilai dari client.
      *
-     * @param  array<int, array{name: string, email: string, telepon: string}>  $pengunjung
+     * @param  array<int, array{name: string, email: string, telepon: string, jenis_kelamin?: string}>  $pengunjung
      * @throws \Exception
      */
     public function process(
@@ -101,10 +101,15 @@ class CheckoutService
                 $volunteer = Volunteer::firstOrCreate(
                     ['email' => $p['email']],
                     [
-                        'name'    => $p['name'],
-                        'telepon' => $this->formatPhone($p['telepon']),
+                        'name'          => $p['name'],
+                        'telepon'       => $p['telepon'],
+                        'jenis_kelamin' => $p['jenis_kelamin'] ?? null,
                     ]
                 );
+                // Update jenis_kelamin if existing volunteer doesn't have it yet
+                if (!$volunteer->wasRecentlyCreated && empty($volunteer->jenis_kelamin) && !empty($p['jenis_kelamin'])) {
+                    $volunteer->update(['jenis_kelamin' => $p['jenis_kelamin']]);
+                }
                 $transaksi->volunteers()->syncWithoutDetaching([$volunteer->id]);
             }
 

@@ -36,12 +36,13 @@ class TransaksiController extends Controller
     {
         $title = 'Transaksi';
         $payment = Payment::select(['id', 'name'])->get();
+        $events  = Event::orderBy('name')->get(['id', 'name']);
 
         $data = Transaksi::with(['event:id,name', 'payment:id,name', 'volunteers:id,name,telepon', 'voucher'])
             ->orderByDesc('created_at')
-            ->paginate(5);
+            ->paginate(15);
 
-        return view('admin.transaksi.index', compact('title', 'data', 'payment'));
+        return view('admin.transaksi.index', compact('title', 'data', 'payment', 'events'));
     }
 
     /**
@@ -316,30 +317,32 @@ class TransaksiController extends Controller
      */
     public function filter(Request $request): View
     {
-        $title = 'Filter Transaksi';
+        $title   = 'Filter Transaksi';
         $payment = Payment::select(['id', 'name'])->get();
+        $events  = Event::orderBy('name')->get(['id', 'name']);
 
-        $data = Transaksi::with(['event:id,name', 'payment:id,name'])
+        $data = Transaksi::with(['event:id,name', 'payment:id,name', 'volunteers:id,name,telepon', 'voucher'])
             ->orderByDesc('created_at')
-            ->when($request->tanggal_awal && $request->tanggal_akhir, fn($q) => 
-                $q->whereDate('created_at', '>=', $request->tanggal_awal)
-                  ->whereDate('created_at', '<=', $request->tanggal_akhir)
+            ->when($request->tanggal_awal && $request->tanggal_akhir, fn($q) =>
+                $q->whereDate('tanggal_register', '>=', $request->tanggal_awal)
+                  ->whereDate('tanggal_register', '<=', $request->tanggal_akhir)
             )
-            ->when($request->tanggal_awal && !$request->tanggal_akhir, fn($q) => 
-                $q->whereDate('created_at', $request->tanggal_awal)
+            ->when($request->tanggal_awal && !$request->tanggal_akhir, fn($q) =>
+                $q->whereDate('tanggal_register', $request->tanggal_awal)
             )
-            ->when($request->id_event, fn($q) => 
+            ->when($request->id_event, fn($q) =>
                 $q->where('id_event', $request->id_event)
             )
-            ->when($request->status_pembayaran, fn($q) => 
+            ->when($request->status_pembayaran, fn($q) =>
                 $q->where('status_pembayaran', $request->status_pembayaran)
             )
-            ->when($request->id_payment, fn($q) => 
+            ->when($request->id_payment, fn($q) =>
                 $q->where('id_payment', $request->id_payment)
             )
-            ->paginate(5);
+            ->paginate(15)
+            ->appends($request->only(['tanggal_awal', 'tanggal_akhir', 'id_event', 'status_pembayaran', 'id_payment']));
 
-        return view('admin.transaksi.index', compact('title', 'data', 'payment'));
+        return view('admin.transaksi.index', compact('title', 'data', 'payment', 'events'));
     }
 
     /**
@@ -347,26 +350,28 @@ class TransaksiController extends Controller
      */
     public function search(Request $request): View
     {
-        $title = 'Search Transaksi';
+        $title   = 'Search Transaksi';
         $payment = Payment::select(['id', 'name'])->get();
+        $events  = Event::orderBy('name')->get(['id', 'name']);
 
-        $data = Transaksi::with(['event:id,name', 'payment:id,name'])
+        $data = Transaksi::with(['event:id,name', 'payment:id,name', 'volunteers:id,name,telepon', 'voucher'])
             ->orderByDesc('created_at')
-            ->when($request->search, fn($q) => 
-                $q->where(fn($query) => 
+            ->when($request->search, fn($q) =>
+                $q->where(fn($query) =>
                     $query->where('id', 'like', '%' . $request->search . '%')
                           ->orWhere('invoice', 'like', '%' . $request->search . '%')
                           ->orWhere('name', 'like', '%' . $request->search . '%')
                           ->orWhere('telepon', 'like', '%' . $request->search . '%')
                           ->orWhere('email', 'like', '%' . $request->search . '%')
-                          ->orWhereHas('event', fn($eq) => 
+                          ->orWhereHas('event', fn($eq) =>
                               $eq->where('name', 'like', '%' . $request->search . '%')
                           )
                 )
             )
-            ->paginate(5);
+            ->paginate(15)
+            ->appends($request->only(['search']));
 
-        return view('admin.transaksi.index', compact('title', 'data', 'payment'));
+        return view('admin.transaksi.index', compact('title', 'data', 'payment', 'events'));
     }
 
     /**

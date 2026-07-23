@@ -18,6 +18,91 @@
             </div>
         </div>
 
+        {{-- Filter panel --}}
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-center gap-2"
+                style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#filterPanel"
+                aria-expanded="{{ (request('tanggal_awal') || request('tanggal_akhir') || request('id_event') || request('status_pembayaran')) ? 'true' : 'false' }}">
+                <i class="bi bi-funnel me-1"></i>
+                <span class="fw-semibold">Filter Transaksi</span>
+                @if(request('tanggal_awal') || request('tanggal_akhir') || request('id_event') || request('status_pembayaran'))
+                    <span class="badge bg-primary ms-1">Aktif</span>
+                @endif
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="collapse {{ (request('tanggal_awal') || request('tanggal_akhir') || request('id_event') || request('status_pembayaran')) ? 'show' : '' }}"
+                id="filterPanel">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('transaksi.filter') }}">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold">Tanggal Awal</label>
+                                <input type="date" name="tanggal_awal" class="form-control"
+                                    value="{{ request('tanggal_awal') }}">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold">Tanggal Akhir</label>
+                                <input type="date" name="tanggal_akhir" class="form-control"
+                                    value="{{ request('tanggal_akhir') }}">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold">Event</label>
+                                <select name="id_event" class="form-select">
+                                    <option value="">Semua Event</option>
+                                    @foreach($events as $event)
+                                        <option value="{{ $event->id }}"
+                                            {{ request('id_event') == $event->id ? 'selected' : '' }}>
+                                            {{ $event->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold">Status Pembayaran</label>
+                                <select name="status_pembayaran" class="form-select">
+                                    <option value="">Semua Status</option>
+                                    <option value="Pending" {{ request('status_pembayaran') === 'Pending' ? 'selected' : '' }}>Pending</option>
+                                    <option value="Success" {{ request('status_pembayaran') === 'Success' ? 'selected' : '' }}>Success</option>
+                                    <option value="Failed" {{ request('status_pembayaran') === 'Failed' ? 'selected' : '' }}>Failed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-funnel me-1"></i>Terapkan Filter
+                            </button>
+                            @if(request('tanggal_awal') || request('tanggal_akhir') || request('id_event') || request('status_pembayaran'))
+                                <a href="{{ route('transaksi.index') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Reset Filter
+                                </a>
+                            @endif
+                        </div>
+                    </form>
+
+                    {{-- Active filter badges --}}
+                    @if(request('tanggal_awal') || request('tanggal_akhir') || request('id_event') || request('status_pembayaran'))
+                        <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+                            <span class="text-muted small fw-semibold me-1 align-self-center">Filter aktif:</span>
+                            @if(request('tanggal_awal'))
+                                <span class="badge bg-secondary">Dari: {{ request('tanggal_awal') }}</span>
+                            @endif
+                            @if(request('tanggal_akhir'))
+                                <span class="badge bg-secondary">Sampai: {{ request('tanggal_akhir') }}</span>
+                            @endif
+                            @if(request('id_event'))
+                                <span class="badge bg-secondary">Event: {{ $events->firstWhere('id', request('id_event'))?->name }}</span>
+                            @endif
+                            @if(request('status_pembayaran'))
+                                <span class="badge {{ request('status_pembayaran') === 'Success' ? 'bg-success' : (request('status_pembayaran') === 'Failed' ? 'bg-danger' : 'bg-warning text-dark') }}">
+                                    {{ request('status_pembayaran') }}
+                                </span>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         {{-- Data card --}}
         <div class="card">
             <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">

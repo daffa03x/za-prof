@@ -27,6 +27,7 @@ class ExportVolunteer implements FromCollection, WithHeadings
             'Nama',
             'Email',
             'Telepon',
+            'Jenis Kelamin',
             'Jumlah Transaksi',
             'Tanggal Daftar',
         ];

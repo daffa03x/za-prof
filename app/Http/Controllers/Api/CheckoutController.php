@@ -29,6 +29,7 @@ class CheckoutController extends Controller
             'pengunjung.*.name'    => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-zA-Z\s]+$/'],
             'pengunjung.*.telepon' => ['required', 'string', 'min:9', 'max:13', 'regex:/^[0-9]+$/'],
             'pengunjung.*.email'   => ['required', 'email:rfc,dns', 'max:255'],
+            'pengunjung.*.jenis_kelamin' => ['nullable', 'string', 'in:Laki-laki,Perempuan'],
         ], [
             'pengunjung.*.name.required'    => 'Nama wajib diisi.',
             'pengunjung.*.name.min'         => 'Nama minimal 3 karakter.',
