@@ -143,9 +143,9 @@
             align-items: center;
             gap: 12px;
             padding: 14px 26px;
-            background: rgba(255, 255, 255, .85);
-            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, .95);
             border-bottom: 1px solid var(--border);
+            /* backdrop-filter removed — caused stacking-context bug blocking dropdown clicks */
         }
 
         .admin-topbar h1 {
@@ -192,6 +192,7 @@
             color: var(--text);
             font-weight: 600;
             font-size: 14px;
+            cursor: pointer;
         }
 
         .user-chip .avatar {
@@ -376,6 +377,7 @@
             border-radius: 12px;
             box-shadow: var(--shadow-md);
             padding: 6px;
+            z-index: 9999;
         }
 
         .dropdown-item {
@@ -467,15 +469,17 @@
                     <span class="avatar">{{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}</span>
                     <span class="d-none d-sm-inline">{{ auth()->user()->name ?? 'Admin' }}</span>
                 </button>
-                <div class="dropdown-menu dropdown-menu-end">
-                    <a class="dropdown-item text-danger" href="{{ route('logout') }}"
-                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                        <i class="bi bi-box-arrow-right me-1"></i> {{ __('Logout') }}
-                    </a>
-                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                        @csrf
-                    </form>
-                </div>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item text-danger" href="{{ route('logout') }}"
+                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            <i class="bi bi-box-arrow-right me-1"></i> {{ __('Logout') }}
+                        </a>
+                    </li>
+                </ul>
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                    @csrf
+                </form>
             </div>
         </header>
 
@@ -530,6 +534,25 @@
             };
             harga.addEventListener('change', function () {
                 this.value = this.value.replace(/\./g, '');
+            });
+        })();
+
+        // Manual collapse fallback — ensures filter panels work even if
+        // Bootstrap's data-API did not auto-initialize.
+        (function () {
+            document.addEventListener('click', function (e) {
+                const trigger = e.target.closest('[data-bs-toggle="collapse"]');
+                if (!trigger) return;
+                const targetSel = trigger.getAttribute('data-bs-target') || trigger.getAttribute('href');
+                if (!targetSel) return;
+                const panel = document.querySelector(targetSel);
+                if (!panel) return;
+                // If Bootstrap is loaded it will handle this; we only act as fallback
+                if (typeof bootstrap === 'undefined') {
+                    e.preventDefault();
+                    panel.classList.toggle('show');
+                    trigger.setAttribute('aria-expanded', panel.classList.contains('show') ? 'true' : 'false');
+                }
             });
         })();
     </script>
