@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FailedEmailController;
+use App\Http\Controllers\ErrorLogController;
 use App\Http\Controllers\SentEmailController;
 use App\Http\Controllers\TransaksiController;
 use App\Http\Controllers\PaymentController;
@@ -116,6 +117,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/sent-email', [SentEmailController::class, 'index'])->name('sent-email.index');
     Route::delete('/sent-email/clear-all', [SentEmailController::class, 'clearAll'])->name('sent-email.clearAll');
     Route::delete('/sent-email/{id}', [SentEmailController::class, 'destroy'])->name('sent-email.destroy');
+
+    // Error Log
+    Route::get('/error-log', [ErrorLogController::class, 'index'])->name('error-log.index');
+    Route::post('/error-log/clear', [ErrorLogController::class, 'clear'])->name('error-log.clear');
+    Route::get('/error-log/download', [ErrorLogController::class, 'download'])->name('error-log.download');
 
     // Resource Routes
     Route::resource('/event', EventController::class);

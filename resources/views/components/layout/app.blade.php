@@ -432,11 +432,11 @@
             ['url' => '/event',        'label' => 'Event',                'icon' => 'bi-calendar-event',        'active' => Request::is('event*')],
             ['url' => '/transaksi',    'label' => 'Transaksi',            'icon' => 'bi-receipt',               'active' => Request::is('transaksi*')],
             ['url' => '/payment',      'label' => 'Metode Pembayaran',    'icon' => 'bi-credit-card',           'active' => Request::is('payment*')],
-            ['url' => '/pixel',        'label' => 'Pixel Tracking',       'icon' => 'bi-broadcast',             'active' => Request::is('pixel*')],
             ['url' => '/voucher',      'label' => 'Kode Voucher',         'icon' => 'bi-ticket-perforated',     'active' => Request::is('voucher*')],
             ['url' => '/volunteer',    'label' => 'Volunteer',            'icon' => 'bi-people',                'active' => Request::is('volunteer*')],
             ['url' => '/failed-email', 'label' => 'Email Tidak Terkirim', 'icon' => 'bi-envelope-exclamation', 'active' => Request::is('failed-email*')],
             ['url' => '/sent-email',   'label' => 'Email Tiket Terkirim', 'icon' => 'bi-envelope-check',       'active' => Request::is('sent-email*')],
+            ['url' => '/error-log',    'label' => 'Error Log',            'icon' => 'bi-bug',                  'active' => Request::is('error-log*')],
         ];
     @endphp
 
@@ -464,19 +464,31 @@
                 <i class="bi bi-list"></i>
             </button>
             <h1>{{ $title ?? 'Admin Panel' }}</h1>
-            <div class="ms-auto dropdown">
-                <button class="user-chip dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="ms-auto" style="position:relative;">
+                <button class="user-chip" type="button" id="userDropdownToggle" aria-haspopup="true" aria-expanded="false">
                     <span class="avatar">{{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}</span>
                     <span class="d-none d-sm-inline">{{ auth()->user()->name ?? 'Admin' }}</span>
+                    <i class="bi bi-chevron-down ms-1" style="font-size:12px;"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                        <a class="dropdown-item text-danger" href="{{ route('logout') }}"
-                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                            <i class="bi bi-box-arrow-right me-1"></i> {{ __('Logout') }}
-                        </a>
-                    </li>
-                </ul>
+                <div id="userDropdownMenu" style="
+                    display:none;
+                    position:absolute;
+                    right:0;
+                    top:calc(100% + 8px);
+                    min-width:180px;
+                    background:#fff;
+                    border:1px solid var(--border);
+                    border-radius:12px;
+                    box-shadow:var(--shadow-md);
+                    padding:6px;
+                    z-index:9999;
+                ">
+                    <a class="dropdown-item text-danger" href="{{ route('logout') }}"
+                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                        style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:14px;text-decoration:none;">
+                        <i class="bi bi-box-arrow-right"></i> {{ __('Logout') }}
+                    </a>
+                </div>
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                     @csrf
                 </form>
@@ -534,6 +546,26 @@
             };
             harga.addEventListener('change', function () {
                 this.value = this.value.replace(/\./g, '');
+            });
+        })();
+
+        // Manual user dropdown — no Bootstrap JS dependency
+        (function () {
+            const toggle = document.getElementById('userDropdownToggle');
+            const menu   = document.getElementById('userDropdownMenu');
+            if (!toggle || !menu) return;
+
+            toggle.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const isOpen = menu.style.display === 'block';
+                menu.style.display = isOpen ? 'none' : 'block';
+                toggle.setAttribute('aria-expanded', !isOpen);
+            });
+
+            // Close when clicking anywhere outside
+            document.addEventListener('click', function () {
+                menu.style.display = 'none';
+                toggle.setAttribute('aria-expanded', 'false');
             });
         })();
 

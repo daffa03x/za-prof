@@ -135,6 +135,12 @@ class CheckoutService
             return $transaksi;
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Checkout process gagal: ' . $e->getMessage(), [
+                'exception'    => $e,
+                'event_id'     => $event->id ?? null,
+                'jumlah_tiket' => $jumlahTiket,
+                'voucher_code' => $voucherCode,
+            ]);
             throw $e;
         }
     }
@@ -223,7 +229,7 @@ class CheckoutService
             Log::error('Gagal membuat instruksi pembayaran Midtrans', [
                 'invoice' => $transaksi->invoice,
                 'channel' => $payment->midtrans_payment_type,
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ]);
 
             throw new \Exception('Gagal membuat instruksi pembayaran. Silakan coba lagi.');
@@ -239,10 +245,10 @@ class CheckoutService
 
         $missing = match ($channel) {
             'bank_transfer' => empty($instructions['bank']) || empty($instructions['va_number']),
-            'echannel' => empty($instructions['bill_key']) || empty($instructions['biller_code']),
-            'qris' => empty($instructions['qr_url']),
+            'echannel'      => empty($instructions['bill_key']) || empty($instructions['biller_code']),
+            'qris'          => empty($instructions['qr_url']),
             'gopay', 'shopeepay' => empty($instructions['deeplink_url']) && empty($instructions['qr_url']),
-            default => true,
+            default         => true,
         };
 
         if ($missing) {
